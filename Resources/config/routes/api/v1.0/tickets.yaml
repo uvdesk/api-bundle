@@ -1,0 +1,14 @@
+uvdesk_api_bundle_api_tickets_v1.0_fetch_tickets:
+    path:       /tickets
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::fetchTickets
+    methods:    [GET]
+
+uvdesk_api_bundle_api_tickets_v1.0_load_ticket_attributes:
+    path:       /tickets/metadata
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::fetchTicketsMetadata
+    methods:    [GET]
+
+uvdesk_api_bundle_api_tickets_v1.0_trash_tickets:
+    path:       /tickets/trash
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::trashTickets
+    methods:    [PUT]

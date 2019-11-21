@@ -1,0 +1,14 @@
+uvdesk_api_bundle_api_user_routing_resources_v1.0:
+    resource: "users.yaml"
+
+uvdesk_api_bundle_api_support_team_routing_resources_v1.0:
+    resource: "teams.yaml"
+
+uvdesk_api_bundle_api_support_group_routing_resources_v1.0:
+    resource: "groups.yaml"
+
+uvdesk_api_bundle_api_ticket_routing_resources_v1.0:
+    resource: "tickets.yaml"
+
+uvdesk_api_bundle_api_ticket_thread_routing_resources_v1.0:
+    resource: "threads.yaml"

@@ -1,0 +1,16 @@
+uvdesk_api_load_configurations:
+    path:     /settings/api
+    controller: Webkul\UVDesk\ApiBundle\Controller\ApiSettings::loadConfigurations
+
+uvdesk_api_load_configurations_xhr:
+    path:     /settings/api/xhr
+    controller: Webkul\UVDesk\ApiBundle\Controller\ApiSettings::loadConfigurationsXHR
+
+uvdesk_api_create_configuration:
+    path:     /settings/api/create
+    controller: Webkul\UVDesk\ApiBundle\Controller\ApiSettings::createAccessCredentials
+
+uvdesk_api_update_configuration_xhr:
+    path:     /settings/api/update/xhr/{id}
+    controller: Webkul\UVDesk\ApiBundle\Controller\ApiSettings::updateAccessCredentialsXHR
+    defaults: { id: '' }
