@@ -9,6 +9,7 @@ use Symfony\Component\EventDispatcher\GenericEvent;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Webkul\UVDesk\CoreFrameworkBndle\Repository\TicketRepository;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 
 class Tickets extends Controller
@@ -126,7 +127,7 @@ class Tickets extends Controller
                     return new JsonResponse($json, Response::HTTP_FORBIDDEN);
                 }
                 switch ($agentInstance->getTicketAccessLevel()) {
-                    case TICKET_GLOBAL_ACCESS:
+                    case TicketRepository::TICKET_GLOBAL_ACCESS:
                         foreach ($ticketIds as $index => $ticketId) {
                             $ticket = $ticketRepository->findOneById($ticketId);
 
@@ -141,7 +142,7 @@ class Tickets extends Controller
                             $json['succeedCount']++;
                         }
                         break;   
-                    case TICKET_GROUP_ACCESS:
+                    case TicketRepository::TICKET_GROUP_ACCESS:
                         foreach ($ticketIds as $index => $ticketId) {
                             $isPermitted = false; 
                             $ticket = $ticketRepository->find($ticketId);
@@ -192,7 +193,7 @@ class Tickets extends Controller
                             
                             if (!$isPermitted) {
                                 $json['failedTickets'][$index]['ticketId'] = $ticketId;
-                                $json['failedTickets'][$index]['message'] = 'Permission Denied!';
+                                $json['failedTickets'][$index]['message'] = 'Insufficient Access Rights!';
                                 $json['failedCount']++;
                                 
                                 continue;                      
@@ -202,7 +203,7 @@ class Tickets extends Controller
                         }
 
                         break;   
-                    case TICKET_TEAM_ACCESS:
+                    case TicketRepository::TICKET_TEAM_ACCESS:
                         foreach ($ticketIds as $index => $ticketId) {
                             $isPermitted = false; 
                             $ticket = $ticketRepository->findOneById($ticketId);
@@ -252,7 +253,7 @@ class Tickets extends Controller
                             
                             if (!$isPermitted) {
                                 $json['failedTickets'][$index]['ticketId'] = $ticketId;
-                                $json['failedTickets'][$index]['message'] = 'Insufficient Permission!';
+                                $json['failedTickets'][$index]['message'] = 'Insufficient Access Rights !';
                                 $json['failedCount']++;
                                 
                                 continue;                      
@@ -276,7 +277,7 @@ class Tickets extends Controller
 
                             if ($ticket->getAgent()->getId() != $user->getId()) {
                                 $json['failedTickets'][$index]['ticketId'] = $ticketId;
-                                $json['failedTickets'][$index]['message'] = 'Insufficient Permission!';
+                                $json['failedTickets'][$index]['message'] = 'Insufficient Access Rights !';
                                 $json['failedCount']++;
                                 
                                 continue;                
@@ -316,7 +317,7 @@ class Tickets extends Controller
      * @return void
      */
     public function createTicket(Request $request)
-    {
+    {   
         return new JsonResponse([]);
     }
     
