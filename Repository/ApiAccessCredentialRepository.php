@@ -19,32 +19,15 @@ class ApiAccessCredentialRepository extends ServiceEntityRepository
         parent::__construct($registry, ApiAccessCredential::class);
     }
 
-    // /**
-    //  * @return ApiAccessCredential[] Returns an array of ApiAccessCredential objects
-    //  */
-    /*
-    public function findByExampleField($value)
-    {
-        return $this->createQueryBuilder('a')
-            ->andWhere('a.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('a.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
+    // Get User by access token
+    public function getUserEmailByAccessToken($accessToken) {
+        $qb = $this->getEntityManager()->createQueryBuilder();
+        $qb->select('user.email')->from($this->getEntityName(), 'aac')
+            ->leftJoin('aac.user', 'user')
+            ->andWhere('aac.token = :accessToken')
+            ->andWhere('aac.isEnabled = 1')
+            ->setParameter('accessToken', $accessToken);
 
-    /*
-    public function findOneBySomeField($value): ?ApiAccessCredential
-    {
-        return $this->createQueryBuilder('a')
-            ->andWhere('a.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
+        return $qb->getQuery()->getOneOrNullResult();
     }
-    */
 }
