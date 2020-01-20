@@ -53,15 +53,15 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getCredentials(Request $request)
     {
-        $credentials = ['email' => null, 'auth_token' => null];
-
         if (strpos(strtolower($request->headers->get('Authorization')), 'basic') === 0) {
             $authorization_key = substr($request->headers->get('Authorization'), 6);
 
             try {
-                list($email, $auth_token) = explode(':', base64_decode($authorization_key));
+                
+                $user = $this->entityManager->getRepository('UVDeskApiBundle:ApiAccessCredential')->getUserEmailByAccessToken($authorization_key);
 
-                return ['email' => $email, 'auth_token' => $auth_token];
+                return ['email' => $user['email'], 'auth_token' => $authorization_key];
+
             } catch (\Exception $e) { dump($e->getMessage()); die; }
         }
         
