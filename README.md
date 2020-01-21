@@ -12,7 +12,7 @@ This bundle can be easily integrated into any symfony application (though it is 
 To require the api bundle into your symfony project, simply run the following from your project root:
 
 ```bash
-$ composer require uvdesk/api-bundle@dev
+$ composer require uvdesk/api-bundle
 ```
 
 License
