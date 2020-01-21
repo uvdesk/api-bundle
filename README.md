@@ -14,7 +14,11 @@ To require the api bundle into your symfony project, simply run the following fr
 ```bash
 $ composer require uvdesk/api-bundle
 ```
+after installing api bundle run the below command:
 
+```bash
+$ php bin/console doctrine:schema:update --force
+```
 License
 --------------
 
