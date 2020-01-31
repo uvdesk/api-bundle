@@ -8,7 +8,19 @@ uvdesk_api_bundle_api_tickets_v1.0_load_ticket_attributes:
     controller: Webkul\UVDesk\ApiBundle\API\Tickets::fetchTicketsMetadata
     methods:    [GET]
 
-uvdesk_api_bundle_api_tickets_v1.0_trash_tickets:
-    path:       /tickets/trash
-    controller: Webkul\UVDesk\ApiBundle\API\Tickets::trashTickets
+uvdesk_api_bundle_api_tickets_v1.0_trash_ticket:
+    path:       /trash/ticket/{ticketId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::trashTicket
     methods:    [PUT]
+    requirements:
+        ticketId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_create_ticket:
+    path:       /ticket
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::createTicket
+    methods:    [POST]    
+
+uvdesk_api_bundle_api_tickets_v1.0_view_ticket:
+    path:       /ticket/{ticketId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::viewTicket
+    methods:    [GET]
