@@ -25,17 +25,17 @@ class Tickets extends Controller
     public function fetchTickets(Request $request)
     {
         $json = [];
+        $entityManager = $this->getDoctrine()->getManager();
         $ticketRepository = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:Ticket');
         $userRepository = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User');
 
-        $em = $this->getDoctrine()->getManager();
-
-        if($request->query->get('actAsType')) {    
+        if ($request->query->get('actAsType')) {    
             switch($request->query->get('actAsType')) {
                 case 'customer': 
-                    $user = $this->getUser();
-                    if($user) {
-                        $json = $repository->getAllCustomerTickets($request->query, $this->container, $user);
+                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+
+                    if ($customer) {
+                        $json = $repository->getAllCustomerTickets($request->query, $this->container, $customer);
                     } else {
                         $json['error'] = 'Error! Resource not found.';
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
@@ -43,8 +43,9 @@ class Tickets extends Controller
                     return new JsonResponse($json);
                     break;
                 case 'agent':
-                    $user = $this->getUser();
-                    if($user) {
+                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+
+                    if ($user) {
                         $request->query->set('agent', $user->getId());
                     } else {
                         $json['error'] = 'Error! Resource not found.';
@@ -54,7 +55,6 @@ class Tickets extends Controller
                 default:
                     $json['error'] = 'Error! invalid actAs details.';
                     return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
-                    break;
             }
         }
 
@@ -64,6 +64,7 @@ class Tickets extends Controller
             'user' => $this->getUser()->getId(),
             'name' => $this->getUser()->getFirstName().' '.$this->getUser()->getLastname(),
         ];
+
         $json['agents'] = $this->get('user.service')->getAgentsPartialDetails();
         $json['status'] = $this->get('ticket.service')->getStatus();
         $json['group'] = $userRepository->getSupportGroups(); 
@@ -124,7 +125,7 @@ class Tickets extends Controller
     }
 
     /**
-     * create support tickets.
+     * Create support tickets.
      *
      * @param Request $request
      * @return void
@@ -133,13 +134,13 @@ class Tickets extends Controller
     {
         $data = $request->request->all()? : json_decode($request->getContent(),true);
         foreach($data as $key => $value) {
-            if(!in_array($key, ['subject', 'group', 'type', 'status','locale','domain', 'priority', 'agent', 'replies', 'createdAt', 'updatedAt', 'customFields', 'files', 'from', 'name', 'reply', 'tags', 'actAsType', 'actAsEmail'])) {
+            if(!in_array($key, ['subject', 'group', 'type', 'status','locale','domain', 'priority', 'agent', 'replies', 'createdAt', 'updatedAt', 'customFields', 'files', 'from', 'name', 'message', 'tags', 'actAsType', 'actAsEmail'])) {
                 unset($data[$key]);
             }
         }
   
-        if(!(isset($data['from']) && isset($data['name']) && isset($data['subject']) && isset($data['reply']) &&  isset($data['actAsType']) || isset($data['actAsEmail']) )) {
-            $json['error'] = 'required fields: name ,from, reply, actAsType or actAsEmail';
+        if(!(isset($data['from']) && isset($data['name']) && isset($data['subject']) && isset($data['message']) &&  isset($data['actAsType']) || isset($data['actAsEmail']) )) {
+            $json['error'] = 'required fields: name ,from, message, actAsType or actAsEmail';
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
@@ -147,35 +148,34 @@ class Tickets extends Controller
             $error = false;
             $message = '';
             $entityManager = $this->getDoctrine()->getManager();
-            $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneById($data['type']);
 
-            if($data['subject'] == '') {
+            if ($data['subject'] == '') {
                 $message = "Warning! Please complete subject field value!";
                 $statusCode = Response::HTTP_BAD_REQUEST;
-            } elseif($data['reply'] == '') {
-                $json['message'] = "Warning! Please complete reply field value!";
+            } elseif($data['message'] == '') {
+                $json['message'] = "Warning! Please complete message field value!";
                 $statusCode = Response::HTTP_BAD_REQUEST;
             } elseif(filter_var($data['from'], FILTER_VALIDATE_EMAIL) === false) {
                 $json['message'] = "Warning! Invalid from Email Address!";
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
-            elseif($data['actAsType'] == ''  &&  $data['actAsEmail'] == '') {
+            elseif ($data['actAsType'] == ''  &&  $data['actAsEmail'] == '') {
                 $json['message'] = "Warning! Provide atleast one parameter actAsType(agent or customer) or actAsEmail";
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
-
-            if(!$error) {
+            
+            if (!$error) {
                 $name = explode(' ',$data['name']);
                 $ticketData['firstName'] = $name[0];
                 $ticketData['lastName'] = isset($name[1]) ? $name[1] : '';
                 $ticketData['role'] = 4;
-               
-                if((array_key_exists('actAsType', $data)) && strtolower($data['actAsType']) == 'customer') {
+             
+                if ((array_key_exists('actAsType', $data)) && strtolower($data['actAsType']) == 'customer') {
                     $actAsType = strtolower($data['actAsType']);             
                 } else if((array_key_exists('actAsEmail', $data)) && strtolower($data['actAsType']) == 'agent') {
                     $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
-
-                    if($user) {
+                    
+                    if ($user) {
                         $actAsType = 'agent';
                     } else {
                         $json['error'] = "Error ! actAsEmail is not valid";
@@ -186,20 +186,21 @@ class Tickets extends Controller
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
+                
                 // Create customer if account does not exists
                 $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['from']);
-
+             
                 if (empty($customer) || null == $customer->getCustomerInstance()) {
                     $role = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportRole')->findOneByCode('ROLE_CUSTOMER');
-    
+                  
                     // Create User Instance
-                    $customer = $this->get('user.service')->createUserInstance($ticketData['from'], $data['name'], $role, [
+                    $customer = $this->get('user.service')->createUserInstance($data['from'], $data['name'], $role, [
                         'source' => 'api',
                         'active' => true
                     ]);
                 }
 
-                if($actAsType == 'agent') {
+                if ($actAsType == 'agent') {
                     $data['user'] = isset($user) && $user ? $user : $this->get('user.service')->getCurrentUser();
                 } else {
                     $data['user'] = $customer;
@@ -207,7 +208,7 @@ class Tickets extends Controller
                 
                 $ticketData['user'] = $data['user'];
                 $ticketData['subject'] = $data['subject'];
-                $ticketData['message'] = $data['reply'];
+                $ticketData['message'] = $data['message'];
                 $ticketData['customer'] = $customer;
                 $ticketData['source'] = 'api';
                 $ticketData['threadType'] = 'create';
@@ -217,8 +218,8 @@ class Tickets extends Controller
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
                 
                 $requestData = $data;
-                foreach($extraKeys as $key) {
-                    if(isset($ticketData[$key])) {
+                foreach ($extraKeys as $key) {
+                    if (isset($ticketData[$key])) {
                         unset($ticketData[$key]);
                     }
                 }
@@ -252,7 +253,7 @@ class Tickets extends Controller
     }
 
     /**
-     * create support tickets.
+     * View support tickets.
      *
      * @param Request $request
      * @return void
@@ -329,10 +330,9 @@ class Tickets extends Controller
     /**
      * objectSerializer This function convert Entity object into json contenxt
      * @param Object $object Customer Entity object
-     * @return JSON Customer JSON context
+     * @return JSON  JSON context
      */
     public function objectSerializer($object) {
-
         $object->formatedCreatedAt = new \Datetime;
         $encoders = array(new XmlEncoder(), new JsonEncoder());
         $normalizer = new ObjectNormalizer();
