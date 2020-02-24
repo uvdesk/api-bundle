@@ -19,6 +19,12 @@ after installing api bundle run the below command:
 ```bash
 $ php bin/console doctrine:schema:update --force
 ```
+
+Getting Started
+--------------
+
+* [Ticket Related APIs][6]
+
 License
 --------------
 
@@ -29,3 +35,4 @@ The API Bundle and libraries included within the bundle are released under the M
 [3]: https://symfony.com/4
 [4]: https://flex.symfony.com/
 [5]: https://getcomposer.org/
+[6]: https://github.com/uvdesk/api-bundle/wiki/Ticket-Related-APIs
