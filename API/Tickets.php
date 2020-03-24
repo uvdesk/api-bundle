@@ -328,6 +328,182 @@ class Tickets extends Controller
     }
 
     /**
+     * delete support tickets.
+     *
+     * @param Request $request
+     * @return void
+     */
+    public function deleteTicketForever(Request $request)
+    {
+        $ticketId = $request->attributes->get('ticketId');
+        $entityManager = $this->getDoctrine()->getManager();
+        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($ticketId);
+        
+        if (!$ticket) {
+            $this->noResultFound();
+        }
+
+        if ($ticket->getIsTrashed()) {
+            $entityManager->remove($ticket);
+            $entityManager->flush();
+
+            $json['success'] = 'Success ! Ticket removed successfully.';
+            $statusCode = Response::HTTP_OK;
+
+            // Trigger ticket delete event
+            $event = new GenericEvent(CoreWorkflowEvents\Ticket\Delete::getId(), [
+                'entity' => $ticket,
+            ]);
+
+            $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+        } else {
+            $json['error'] = 'Warning ! something went wrong.';
+            $statusCode = Response::HTTP_BAD_REQUEST;
+        }
+
+        return new JsonResponse($json, $statusCode);
+    }
+
+    /**
+     * Assign Ticket to a agent
+     *
+     * @param Request $request
+     * @return void
+    */
+
+    public function assignAgent(Request $request)
+    {
+        $json = [];
+        $data = json_decode($request->getContent(), true);
+        $userId = $request->attributes->get('id');
+        $entityManager = $this->getDoctrine()->getManager();
+        $ticket = $entityManager->getRepository('WebkulTicketBundle:Ticket')->findOneBy(array('id' => $userId));
+
+        if ($ticket) {
+            if (isset($data['id'])) {
+                $agent = $entityManager->getRepository('WebkulUserBundle:User')->find($data['id']);
+            } else {
+                $json['error'] = $this->translate('missing fields');   
+                $json['description'] = $this->translate('required: id ');     
+                return new JsonResponse($json, Response::HTTP_BAD_REQUEST);   
+            }
+
+            if ($agent) {
+                if($ticket->getAgent() != $agent) {
+                    $ticket->setAgent($agent);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    $json['success'] = 'Success ! Ticket assigned to agent successfully.';
+                    $statusCode = Response::HTTP_OK;
+        
+                    // Trigger ticket delete event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Agent::getId(), [
+                        'entity' => $ticket,
+                    ]);
+        
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    
+                } else {
+                    $json['error'] = 'invalid resource';
+                    $json['description'] = $this->translate('Error ! Invalid agent.');
+                    $statusCode = Response::HTTP_NOT_FOUND;
+                }
+            }
+        } else {
+            $json['error'] = $this->translate('invalid ticket');
+            $statusCode = Response::HTTP_NOT_FOUND;
+        }
+
+        return new JsonResponse($json, $statusCode);  
+    }
+
+    /**
+     * adding  or removing collaborator to a Ticket
+     *
+     * @param Request $request
+     * @return void
+    */
+
+    public function addRemoveTicketCollaborator(Request $request) 
+    {
+        $json = [];
+        $statusCode = Response::HTTP_OK;
+        $content = $request->request->all()? : json_decode($request->getContent(), true);
+
+        $entityManager = $this->getDoctrine()->getManager();
+        $ticket = $entityManager->getRepository('WebkulTicketBundle:Ticket')->find($request->attributes->get('id'));
+        if(!$ticket) {
+            $json['error'] = 'resource not found';
+            return new JsonResponse($json, Response::HTTP_NOT_FOUND);
+        }
+
+        if($request->getMethod() == "POST") { 
+            if(!isset($content['email']) || !filter_var($content['email'], FILTER_VALIDATE_EMAIL)) {
+                $json['error'] = 'missing/invalid field';
+                $json['message'] = 'required: email';
+                return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+            }
+
+            if($content['email'] == $ticket->getCustomer()->getEmail()) {
+                $json['error'] = $this->get('translator')->trans('Error ! Can not add customer as a collaborator.');
+                $statusCode = Response::HTTP_BAD_REQUEST;
+            } else {
+                $data = array(
+                    'from' => $content['email'],
+                    'firstName' => ($firstName = ucfirst(current(explode('@', $content['email'])))),
+                    'lastName' => ' ',
+                    'role' => 4,
+                );
+                
+                $supportRole = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportRole')->findOneByCode('ROLE_CUSTOMER');
+                $collaborator = $this->get('user.service')->createUserInstance($data['from'], $data['firstName'], $supportRole, $extras = ["active" => true]);
+                $checkTicket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->isTicketCollaborator($ticket, $content['email']);
+
+                if (!$checkTicket) { 
+                    $ticket->addCollaborator($collaborator);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    $ticket->lastCollaborator = $collaborator;
+
+                    if ($collaborator->getCustomerInstance())
+                        $json['collaborator'] = $collaborator->getCustomerInstance()->getPartialDetails();
+                    else
+                        $json['collaborator'] = $collaborator->getAgentInstance()->getPartialDetails();
+
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Collaborator::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success'] =  $this->get('translator')->trans('Success ! Collaborator added successfully.');
+                    $statusCode = Response::HTTP_OK;
+                } else {
+                    $json['warning'] =  $this->get('translator')->trans('Collaborator is already added.');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
+                }
+            }
+        } elseif($request->getMethod() == "DELETE") {
+            $collaborator = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneBy(array('id' => $request->attributes->get('id')));
+            if($collaborator) {
+                $ticket->removeCollaborator($collaborator);
+                $entityManager->persist($ticket);
+                $entityManager->flush();
+
+                $json['success'] =  $this->get('translator')->trans('Success ! Collaborator removed successfully.');
+                $statusCode = Response::HTTP_OK;
+            } else {
+                $json['error'] =  $this->get('translator')->trans('Error ! Invalid Collaborator.');
+                $statusCode = Response::HTTP_BAD_REQUEST;
+            }
+        }
+
+        return new JsonResponse($json, $statusCode);  
+    }
+
+    /**
      * objectSerializer This function convert Entity object into json contenxt
      * @param Object $object Customer Entity object
      * @return JSON  JSON context
