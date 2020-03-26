@@ -46,4 +46,20 @@ uvdesk_api_bundle_api_tickets_v1.0_add_remove_collaborator:
     requirements:
         id: '\d+'
 
-        
+uvdesk_api_bundle_api_tickets_v1.0_download_attachment:
+    path: /ticket/attachment/{attachmentId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::downloadAttachment
+    methods: [POST, DELETE]
+    requirements:
+        attachmentId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_download_attachment_zip:
+    path:     /ticket/download-zip/{threadId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::downloadZipAttachment
+    requirements:
+        threadId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_edit_ticket_property:
+    path: /ticket/{ticketId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::editTicketProperties
+    methods: [PATCH]
