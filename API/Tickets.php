@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
-
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
@@ -498,6 +497,393 @@ class Tickets extends Controller
                 $json['error'] =  $this->get('translator')->trans('Error ! Invalid Collaborator.');
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
+        }
+
+        return new JsonResponse($json, $statusCode);  
+    }
+    
+    /**
+     * Download ticket attachment
+     *
+     * @param Request $request
+     * @return void
+    */
+    public function downloadAttachment(Request $request) 
+    {
+        $attachmendId = $request->attributes->get('attachmendId');
+        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
+        $attachment = $attachmentRepository->findOneById($attachmendId);
+        $baseurl = $request->getScheme() . '://' . $request->getHttpHost() . $request->getBasePath();
+
+        if (!$attachment) {
+            $this->noResultFound();
+        }
+
+        $path = $this->get('kernel')->getProjectDir() . "/public/". $attachment->getPath();
+
+        $response = new Response();
+        $response->setStatusCode(200);
+
+        $response->headers->set('Content-type', $attachment->getContentType());
+        $response->headers->set('Content-Disposition', 'attachment; filename='. $attachment->getName());
+        $response->sendHeaders();
+        $response->setContent(readfile($path));
+
+        return $response; 
+    }
+
+    /**
+     * Download Zip attachment
+     *
+     * @param Request $request
+     * @return void
+    */
+    public function downloadZipAttachment(Request $request)
+    {
+        $threadId = $request->attributes->get('threadId');
+        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
+
+        $attachment = $attachmentRepository->findByThread($threadId);
+
+        if (!$attachment) {
+            $this->noResultFound();
+        }
+
+        $zipname = 'attachments/' .$threadId.'.zip';
+        $zip = new \ZipArchive;
+
+        $zip->open($zipname, \ZipArchive::CREATE);
+        if (count($attachment)) {
+            foreach ($attachment as $attach) {
+                $zip->addFile(substr($attach->getPath(), 1));
+            }
+        }
+
+        $zip->close();
+
+        $response = new Response();
+        $response->setStatusCode(200);
+        $response->headers->set('Content-type', 'application/zip');
+        $response->headers->set('Content-Disposition', 'attachment; filename=' . $threadId . '.zip');
+        $response->sendHeaders();
+        $response->setContent(readfile($zipname));
+
+        return $response;
+    }
+
+    /**
+     * Edit Ticket properties
+     *
+     * @param Request $request
+     * @return void
+    */
+    public function editTicketProperties(Request $request) 
+    {
+        $json = [];
+        $statusCode = Response::HTTP_OK;
+
+        $entityManager = $this->getDoctrine()->getManager();
+        $requestContent = $request->request->all() ?: json_decode($request->getContent(), true);
+        $ticketId =  $requestContent['ticketId'];
+        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->findOneById($ticketId);
+
+        // Validate request integrity
+        if (empty($ticket)) {
+            $json['error']  = 'invalid resource';
+            $json['description'] =  $this->get('translator')->trans('Unable to retrieve details for ticket #%ticketId%.', [
+                                        '%ticketId%' => $ticketId,
+                                    ]);
+            $statusCode = Response::HTTP_NOT_FOUND;
+            return new JsonResponse($json, $statusCode);  
+        } else if (!isset($requestContent['property'])) {
+            $json['error']  = 'missing resource';
+            $json['description'] = $this->get('translator')->trans('Insufficient details provided.');
+            $statusCode = Response::HTTP_BAD_REQUEST;
+            return new JsonResponse($json, $statusCode); 
+        }
+
+        // Update property
+        switch ($requestContent['property']) {
+            case 'agent':
+                $agent = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneById($requestContent['value']);
+                if (empty($agent)) {
+                    // User does not exist
+                    $json['error']  = 'No such user exist';
+                    $json['description'] = $this->get('translator')->trans('Unable to retrieve agent details');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    // Check if an agent instance exists for the user
+                    $agentInstance = $agent->getAgentInstance();
+                    if (empty($agentInstance)) {
+                        // Agent does not exist
+                        $json['error']  = 'No such user exist';
+                        $json['description'] = $this->get('translator')->trans('Unable to retrieve agent details');
+                        $statusCode = Response::HTTP_BAD_REQUEST;
+                        return new JsonResponse($json, $statusCode);
+                    }
+                }
+
+                $agentDetails = $agentInstance->getPartialDetails();
+
+                // Check if ticket is already assigned to the agent
+                if ($ticket->getAgent() && $agent->getId() === $ticket->getAgent()->getId()) {
+                    $json['success']  = 'Already assigned';
+                    $json['description'] = $this->get('translator')->trans('Ticket already assigned to %agent%', [
+                        '%agent%' => $agentDetails['name']]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setAgent($agent);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger Agent Assign event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Agent::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket successfully assigned to %agent%', [
+                        '%agent%' => $agentDetails['name'],
+                    ]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'status':
+                $ticketStatus = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketStatus')->findOneById((int) $requestContent['value']);
+
+                if (empty($ticketStatus)) {
+                    // Selected ticket status does not exist
+                    $json['error']  = 'Error';
+                    $json['description'] = $this->get('translator')->trans('Unable to retrieve status details');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
+                    return new JsonResponse($json, $statusCode);
+                }
+
+                if ($ticketStatus->getId() === $ticket->getStatus()->getId()) {
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket status already set to %status%', [
+                        '%status%' => $ticketStatus->getDescription()]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setStatus($ticketStatus);
+
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger ticket status event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Status::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] =  $this->get('translator')->trans('Ticket status update to %status%', [
+                        '%status%' => $ticketStatus->getDescription()]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'priority':
+                // $this->isAuthorized('ROLE_AGENT_UPDATE_TICKET_PRIORITY');
+                $ticketPriority = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketPriority')->findOneById($requestContent['value']);
+
+                if (empty($ticketPriority)) {
+                    // Selected ticket priority does not exist
+                    return new Response(json_encode([
+                        'alertClass' => 'danger',
+                        'alertMessage' => $this->get('translator')->trans('Unable to retrieve priority details'),
+                    ]), 404, ['Content-Type' => 'application/json']);
+
+                    
+                    $json['error']  = 'Error';
+                    $json['description'] =  $this->get('translator')->trans('Unable to retrieve priority details');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
+                    return new JsonResponse($json, $statusCode);
+                }
+
+                if ($ticketPriority->getId() === $ticket->getPriority()->getId()) {
+                    $json['success']  = 'Success';
+                    $json['description'] =  $this->get('translator')->trans('Ticket priority already set to %priority%', [
+                        '%priority%' => $ticketPriority->getDescription()
+                    ]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setPriority($ticketPriority);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger ticket Priority event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Priority::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] =  $this->get('translator')->trans('Ticket priority updated to %priority%', [
+                        '%priority%' => $ticketPriority->getDescription()
+                    ]);
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'group':
+                $supportGroup = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportGroup')->findOneById($requestContent['value']);
+
+                if (empty($supportGroup)) {
+                    if ($requestContent['value'] == "") {
+                        if ($ticket->getSupportGroup() != null) {
+                            $ticket->setSupportGroup(null);
+                            $entityManager->persist($ticket);
+                            $entityManager->flush();
+                        }
+
+                        $responseCode = 200;
+                        $response = [
+                            'alertClass' => 'success',
+                            'alertMessage' => $this->get('translator')->trans('Ticket support group updated successfully'),
+                        ];
+                        
+                        $json['success']  = 'Success';
+                        $json['description'] =   $this->get('translator')->trans('Ticket support group updated successfully');
+                        $statusCode = Response::HTTP_OK;
+                    } else {
+                        $json['error']  = 'Error';
+                        $json['description'] = $this->get('translator')->trans('Unable to retrieve support group details');
+                        $statusCode = Response::HTTP_BAD_REQUEST;
+                    }
+
+                    return new JsonResponse($json, $statusCode);
+                }
+
+                if ($ticket->getSupportGroup() != null && $supportGroup->getId() === $ticket->getSupportGroup()->getId()) {
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket already assigned to support group');
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setSupportGroup($supportGroup);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger Support group event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Group::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket assigned to support group successfully');
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'team':
+                $supportTeam = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportTeam')->findOneById($requestContent['value']);
+
+                if (empty($supportTeam)) {
+                    if ($requestContent['value'] == "") {
+                        if ($ticket->getSupportTeam() != null) {
+                            $ticket->setSupportTeam(null);
+                            $entityManager->persist($ticket);
+                            $entityManager->flush();
+                        }
+
+                        $json['success']  = 'Success';
+                        $json['description'] = $this->get('translator')->trans('Ticket support team updated successfully');
+                        $statusCode = Response::HTTP_OK;
+                        return new JsonResponse($json, $statusCode);
+                    } else {
+                        $json['error']  = 'Error';
+                        $json['description'] = $this->get('translator')->trans('Unable to retrieve support team details');
+                        $statusCode = Response::HTTP_BAD_REQUEST;
+                        return new JsonResponse($json, $statusCode);
+                    }
+                }
+
+                if ($ticket->getSupportTeam() != null && $supportTeam->getId() === $ticket->getSupportTeam()->getId()) {
+                        $json['success']  = 'Success';
+                        $json['description'] = $this->get('translator')->trans('Ticket already assigned to support team');
+                        $statusCode = Response::HTTP_OK;
+                        return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setSupportTeam($supportTeam);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger ticket delete event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Team::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket assigned to support team successfully');
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'type':
+                // $this->isAuthorized('ROLE_AGENT_UPDATE_TICKET_TYPE');
+                $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneById($requestContent['value']);
+
+                if (empty($ticketType)) {
+                    // Selected ticket priority does not exist
+                    $json['error']  = 'Error';
+                    $json['description'] = $this->get('translator')->trans('Unable to retrieve ticket type details');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
+                    return new JsonResponse($json, $statusCode);
+                }
+
+                if (null != $ticket->getType() && $ticketType->getId() === $ticket->getType()->getId()) {
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket type already set to ' . $ticketType->getDescription());
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $ticket->setType($ticketType);
+
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    // Trigger ticket delete event
+                    $event = new GenericEvent(CoreWorkflowEvents\Ticket\Type::getId(), [
+                        'entity' => $ticket,
+                    ]);
+
+                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Ticket type updated to ' . $ticketType->getDescription());
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            case 'label':
+                $label = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportLabel')->find($requestContent['labelId']);
+                if($label) {
+                    $ticket->removeSupportLabel($label);
+                    $entityManager->persist($ticket);
+                    $entityManager->flush();
+
+                    $json['success']  = 'Success';
+                    $json['description'] = $this->get('translator')->trans('Success ! Ticket to label removed successfully');
+                    $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                }
+                break;
+            default:
+                break;
         }
 
         return new JsonResponse($json, $statusCode);  
