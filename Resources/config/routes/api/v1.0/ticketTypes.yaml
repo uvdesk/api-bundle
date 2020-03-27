@@ -1,4 +1,0 @@
-uvdesk_api_bundle_api_tickets_v1.0_show_ticketTypes:
-    path:     /ticket-types
-    controller: Webkul\UVDesk\ApiBundle\API\TicketTypes::ticketTypeList
-    methods:  [GET]

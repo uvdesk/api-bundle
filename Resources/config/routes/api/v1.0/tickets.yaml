@@ -31,6 +31,11 @@ uvdesk_api_bundle_api_tickets_v1.0_delete_ticket:
     methods:    [DELETE]
     requirements:
         ticketId: '\d+'
+        
+uvdesk_api_bundle_api_tickets_v1.0_show_ticketTypes:
+    path:     /ticket-types
+    controller: Webkul\UVDesk\ApiBundle\API\TicketTypes::ticketTypeList
+    methods:  [GET]
 
 uvdesk_api_bundle_api_tickets_v1.0_assign_agent_to_ticket:
     path:   /ticket/{id}/agent
