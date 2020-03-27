@@ -20,11 +20,15 @@ class TicketTypes extends Controller
     */
     public function ticketTypeList(Request $request) 
     {
-        $entityManager = $this->getDoctrine()->getManager();
         $json = [];
-        $json =  $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findByIsActive(true);
+        $entityManager = $this->getDoctrine()->getManager();
+        $ticketTypes =  $entityManager->createQueryBuilder()
+                                      ->select("TT")
+                                      ->from('UVDeskCoreFrameworkBundle:TicketType', 'TT')
+                                      ->Where('TT.isActive = 1')
+                                      ->getQuery()->getArrayResult();
 
-        return new JsonResponse($json);
+        return new JsonResponse($ticketTypes); 
     }
 }
 
