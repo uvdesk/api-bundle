@@ -36,7 +36,7 @@ class Tickets extends Controller
                     if ($customer) {
                         $json = $repository->getAllCustomerTickets($request->query, $this->container, $customer);
                     } else {
-                        $json['error'] = 'Error! Resource not found.';
+                        $json['error'] = $this->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
                     }
                     return new JsonResponse($json);
@@ -47,12 +47,12 @@ class Tickets extends Controller
                     if ($user) {
                         $request->query->set('agent', $user->getId());
                     } else {
-                        $json['error'] = 'Error! Resource not found.';
+                        $json['error'] = $this->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
                     }
                     break;
                 default:
-                    $json['error'] = 'Error! invalid actAs details.';
+                    $json['error'] = $this->get('translator')->trans('Error! invalid actAs details.');
                     return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
             }
         }
@@ -106,7 +106,7 @@ class Tickets extends Controller
             $entityManager->persist($ticket);
             $entityManager->flush();
 
-            $json['success'] = 'Success ! Ticket moved to trash successfully.';
+            $json['success'] = $this->get('translator')->trans('Success ! Ticket moved to trash successfully.');
             $statusCode = Response::HTTP_OK;
 
             // Trigger ticket delete event
@@ -116,7 +116,7 @@ class Tickets extends Controller
 
             $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
         } else {
-            $json['error'] = 'Warning ! Ticket is already in trash.';
+            $json['error'] = $this->get('translator')->trans('Warning ! Ticket is already in trash.');
             $statusCode = Response::HTTP_BAD_REQUEST;
         }
 
@@ -139,7 +139,7 @@ class Tickets extends Controller
         }
   
         if(!(isset($data['from']) && isset($data['name']) && isset($data['subject']) && isset($data['message']) &&  isset($data['actAsType']) || isset($data['actAsEmail']) )) {
-            $json['error'] = 'required fields: name ,from, message, actAsType or actAsEmail';
+            $json['error'] = $this->get('translator')->trans('required fields: name ,from, message, actAsType or actAsEmail');
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
@@ -149,17 +149,17 @@ class Tickets extends Controller
             $entityManager = $this->getDoctrine()->getManager();
 
             if ($data['subject'] == '') {
-                $message = "Warning! Please complete subject field value!";
+                $message = $this->get('translator')->trans("Warning! Please complete subject field value!");
                 $statusCode = Response::HTTP_BAD_REQUEST;
             } elseif($data['message'] == '') {
-                $json['message'] = "Warning! Please complete message field value!";
+                $json['message'] = $this->get('translator')->trans("Warning! Please complete message field value!");
                 $statusCode = Response::HTTP_BAD_REQUEST;
             } elseif(filter_var($data['from'], FILTER_VALIDATE_EMAIL) === false) {
-                $json['message'] = "Warning! Invalid from Email Address!";
+                $json['message'] = $this->get('translator')->trans("Warning! Invalid from Email Address!");
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
             elseif ($data['actAsType'] == ''  &&  $data['actAsEmail'] == '') {
-                $json['message'] = "Warning! Provide atleast one parameter actAsType(agent or customer) or actAsEmail";
+                $json['message'] = $this->get('translator')->trans("Warning! Provide atleast one parameter actAsType(agent or customer) or actAsEmail");
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
             
@@ -177,11 +177,11 @@ class Tickets extends Controller
                     if ($user) {
                         $actAsType = 'agent';
                     } else {
-                        $json['error'] = "Error ! actAsEmail is not valid";
+                        $json['error'] = $this->get('translator')->trans("Error ! actAsEmail is not valid");
                         return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
                     }
                 } else {
-                    $json['warning'] = 'Warning ! For Customer spacify actAsType as customer and for Agent spacify both parameter actASType  as agent and actAsEmail as agent email';
+                    $json['warning'] = $this->get('translator')->trans('Warning ! For Customer spacify actAsType as customer and for Agent spacify both parameter actASType  as agent and actAsEmail as agent email');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
@@ -234,17 +234,17 @@ class Tickets extends Controller
                     //
                 }
 
-                $json['message'] = 'Success ! Ticket has been created successfully.';
+                $json['message'] = $this->get('translator')->trans('Success ! Ticket has been created successfully.');
                 $json['ticketId'] = $thread->getTicket()->getId();
                 $statusCode = Response::HTTP_OK;
 
             } else {
-                $json['message'] = 'Warning ! Required parameters should not be blank';
+                $json['message'] = $this->get('translator')->trans('Warning ! Required parameters should not be blank');
                 $statusCode = Response::HTTP_BAD_REQUEST;
             }
         } else {
-            $json['error'] = 'invalid/empty size of Request';
-            $json['message'] = 'Warning ! Post size can not exceed 25MB';
+            $json['error'] = $this->get('translator')->trans('invalid/empty size of Request');
+            $json['message'] = $this->get('translator')->trans('Warning ! Post size can not exceed 25MB');
             $statusCode = Response::HTTP_BAD_REQUEST;
         }
 
@@ -346,7 +346,7 @@ class Tickets extends Controller
             $entityManager->remove($ticket);
             $entityManager->flush();
 
-            $json['success'] = 'Success ! Ticket removed successfully.';
+            $json['success'] = $this->get('translator')->trans('Success ! Ticket removed successfully.');
             $statusCode = Response::HTTP_OK;
 
             // Trigger ticket delete event
@@ -356,7 +356,7 @@ class Tickets extends Controller
 
             $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
         } else {
-            $json['error'] = 'Warning ! something went wrong.';
+            $json['error'] = $this->get('translator')->trans('Warning ! something went wrong.');
             $statusCode = Response::HTTP_BAD_REQUEST;
         }
 
@@ -369,31 +369,30 @@ class Tickets extends Controller
      * @param Request $request
      * @return void
     */
-
     public function assignAgent(Request $request)
     {
         $json = [];
-        $data = json_decode($request->getContent(), true);
-        $userId = $request->attributes->get('id');
+        $data = $request->request->all() ? :json_decode($request->getContent(), true);
+        $ticketId = $request->attributes->get('ticketId');
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('WebkulTicketBundle:Ticket')->findOneBy(array('id' => $userId));
-
+        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->findOneBy(array('id' => $ticketId));
+    
         if ($ticket) {
             if (isset($data['id'])) {
-                $agent = $entityManager->getRepository('WebkulUserBundle:User')->find($data['id']);
+                $agent = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->find($data['id']);
             } else {
-                $json['error'] = $this->translate('missing fields');   
-                $json['description'] = $this->translate('required: id ');     
+                $json['error'] = $this->get('translator')->trans('missing fields');   
+                $json['description'] = $this->get('translator')->trans('required: id ');     
                 return new JsonResponse($json, Response::HTTP_BAD_REQUEST);   
             }
-
+           
             if ($agent) {
                 if($ticket->getAgent() != $agent) {
                     $ticket->setAgent($agent);
                     $entityManager->persist($ticket);
                     $entityManager->flush();
 
-                    $json['success'] = 'Success ! Ticket assigned to agent successfully.';
+                    $json['success'] = $this->get('translator')->trans('Success ! Ticket assigned to agent successfully.');
                     $statusCode = Response::HTTP_OK;
         
                     // Trigger ticket delete event
@@ -404,13 +403,13 @@ class Tickets extends Controller
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
                     
                 } else {
-                    $json['error'] = 'invalid resource';
-                    $json['description'] = $this->translate('Error ! Invalid agent.');
+                    $json['error'] = $this->get('translator')->trans('invalid resource');
+                    $json['description'] = $this->get('translator')->trans('Error ! Invalid agent or already assigned for this ticket');
                     $statusCode = Response::HTTP_NOT_FOUND;
                 }
             }
         } else {
-            $json['error'] = $this->translate('invalid ticket');
+            $json['error'] = $this->get('translator')->trans('invalid ticket');
             $statusCode = Response::HTTP_NOT_FOUND;
         }
 
@@ -431,16 +430,16 @@ class Tickets extends Controller
         $content = $request->request->all()? : json_decode($request->getContent(), true);
 
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('WebkulTicketBundle:Ticket')->find($request->attributes->get('id'));
+        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($request->attributes->get('ticketId'));
         if(!$ticket) {
-            $json['error'] = 'resource not found';
+            $json['error'] =  $this->get('translator')->trans('resource not found');
             return new JsonResponse($json, Response::HTTP_NOT_FOUND);
         }
 
         if($request->getMethod() == "POST") { 
             if(!isset($content['email']) || !filter_var($content['email'], FILTER_VALIDATE_EMAIL)) {
-                $json['error'] = 'missing/invalid field';
-                $json['message'] = 'required: email';
+                $json['error'] = $this->get('translator')->trans('missing/invalid field');
+                $json['message'] = $this->get('translator')->trans('required: email');
                 return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
             }
 
@@ -485,7 +484,7 @@ class Tickets extends Controller
                 }
             }
         } elseif($request->getMethod() == "DELETE") {
-            $collaborator = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneBy(array('id' => $request->attributes->get('id')));
+            $collaborator = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneBy(array('id' => $content['id']));
             if($collaborator) {
                 $ticket->removeCollaborator($collaborator);
                 $entityManager->persist($ticket);
@@ -584,9 +583,8 @@ class Tickets extends Controller
 
         $entityManager = $this->getDoctrine()->getManager();
         $requestContent = $request->request->all() ?: json_decode($request->getContent(), true);
-        $ticketId =  $requestContent['ticketId'];
+        $ticketId =  $request->attributes->get('ticketId');
         $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->findOneById($ticketId);
-
         // Validate request integrity
         if (empty($ticket)) {
             $json['error']  = 'invalid resource';
@@ -596,19 +594,18 @@ class Tickets extends Controller
             $statusCode = Response::HTTP_NOT_FOUND;
             return new JsonResponse($json, $statusCode);  
         } else if (!isset($requestContent['property'])) {
-            $json['error']  = 'missing resource';
+            $json['error']  =  $this->get('translator')->trans('missing resource');
             $json['description'] = $this->get('translator')->trans('Insufficient details provided.');
             $statusCode = Response::HTTP_BAD_REQUEST;
             return new JsonResponse($json, $statusCode); 
         }
-
         // Update property
         switch ($requestContent['property']) {
             case 'agent':
                 $agent = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneById($requestContent['value']);
                 if (empty($agent)) {
                     // User does not exist
-                    $json['error']  = 'No such user exist';
+                    $json['error']  = $this->get('translator')->trans('No such user exist');
                     $json['description'] = $this->get('translator')->trans('Unable to retrieve agent details');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
@@ -617,7 +614,7 @@ class Tickets extends Controller
                     $agentInstance = $agent->getAgentInstance();
                     if (empty($agentInstance)) {
                         // Agent does not exist
-                        $json['error']  = 'No such user exist';
+                        $json['error']  = $this->get('translator')->trans('No such user exist');
                         $json['description'] = $this->get('translator')->trans('Unable to retrieve agent details');
                         $statusCode = Response::HTTP_BAD_REQUEST;
                         return new JsonResponse($json, $statusCode);
@@ -628,7 +625,7 @@ class Tickets extends Controller
 
                 // Check if ticket is already assigned to the agent
                 if ($ticket->getAgent() && $agent->getId() === $ticket->getAgent()->getId()) {
-                    $json['success']  = 'Already assigned';
+                    $json['success']  = $this->get('translator')->trans('Already assigned');
                     $json['description'] = $this->get('translator')->trans('Ticket already assigned to %agent%', [
                         '%agent%' => $agentDetails['name']]);
                     $statusCode = Response::HTTP_OK;
@@ -645,7 +642,7 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket successfully assigned to %agent%', [
                         '%agent%' => $agentDetails['name'],
                     ]);
@@ -658,14 +655,14 @@ class Tickets extends Controller
 
                 if (empty($ticketStatus)) {
                     // Selected ticket status does not exist
-                    $json['error']  = 'Error';
+                    $json['error']  = $this->get('translator')->trans('Error');
                     $json['description'] = $this->get('translator')->trans('Unable to retrieve status details');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
 
                 if ($ticketStatus->getId() === $ticket->getStatus()->getId()) {
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket status already set to %status%', [
                         '%status%' => $ticketStatus->getDescription()]);
                     $statusCode = Response::HTTP_OK;
@@ -683,7 +680,7 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  =  $this->get('translator')->trans('Success');
                     $json['description'] =  $this->get('translator')->trans('Ticket status update to %status%', [
                         '%status%' => $ticketStatus->getDescription()]);
                     $statusCode = Response::HTTP_OK;
@@ -696,20 +693,14 @@ class Tickets extends Controller
 
                 if (empty($ticketPriority)) {
                     // Selected ticket priority does not exist
-                    return new Response(json_encode([
-                        'alertClass' => 'danger',
-                        'alertMessage' => $this->get('translator')->trans('Unable to retrieve priority details'),
-                    ]), 404, ['Content-Type' => 'application/json']);
-
-                    
-                    $json['error']  = 'Error';
+                    $json['error']  = $this->get('translator')->trans('Error');
                     $json['description'] =  $this->get('translator')->trans('Unable to retrieve priority details');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
 
                 if ($ticketPriority->getId() === $ticket->getPriority()->getId()) {
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] =  $this->get('translator')->trans('Ticket priority already set to %priority%', [
                         '%priority%' => $ticketPriority->getDescription()
                     ]);
@@ -727,7 +718,7 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] =  $this->get('translator')->trans('Ticket priority updated to %priority%', [
                         '%priority%' => $ticketPriority->getDescription()
                     ]);
@@ -746,17 +737,11 @@ class Tickets extends Controller
                             $entityManager->flush();
                         }
 
-                        $responseCode = 200;
-                        $response = [
-                            'alertClass' => 'success',
-                            'alertMessage' => $this->get('translator')->trans('Ticket support group updated successfully'),
-                        ];
-                        
-                        $json['success']  = 'Success';
+                        $json['success']  = $this->get('translator')->trans('Success');
                         $json['description'] =   $this->get('translator')->trans('Ticket support group updated successfully');
                         $statusCode = Response::HTTP_OK;
                     } else {
-                        $json['error']  = 'Error';
+                        $json['error']  = $this->get('translator')->trans('Error');
                         $json['description'] = $this->get('translator')->trans('Unable to retrieve support group details');
                         $statusCode = Response::HTTP_BAD_REQUEST;
                     }
@@ -765,7 +750,7 @@ class Tickets extends Controller
                 }
 
                 if ($ticket->getSupportGroup() != null && $supportGroup->getId() === $ticket->getSupportGroup()->getId()) {
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket already assigned to support group');
                     $statusCode = Response::HTTP_OK;
                     return new JsonResponse($json, $statusCode);
@@ -781,8 +766,13 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
+                    
                     $json['description'] = $this->get('translator')->trans('Ticket assigned to support group successfully');
+                    $json['description'] = $this->get('translator')->trans('Ticket assigned to support group %group%', [
+                        '%group%' => $supportGroup->getDescription()
+                    ]);
+                    
                     $statusCode = Response::HTTP_OK;
                     return new JsonResponse($json, $statusCode);
                 }
@@ -798,12 +788,12 @@ class Tickets extends Controller
                             $entityManager->flush();
                         }
 
-                        $json['success']  = 'Success';
+                        $json['success']  = $this->get('translator')->trans('Success');
                         $json['description'] = $this->get('translator')->trans('Ticket support team updated successfully');
                         $statusCode = Response::HTTP_OK;
                         return new JsonResponse($json, $statusCode);
                     } else {
-                        $json['error']  = 'Error';
+                        $json['error']  = $this->get('translator')->trans('Error');
                         $json['description'] = $this->get('translator')->trans('Unable to retrieve support team details');
                         $statusCode = Response::HTTP_BAD_REQUEST;
                         return new JsonResponse($json, $statusCode);
@@ -811,7 +801,7 @@ class Tickets extends Controller
                 }
 
                 if ($ticket->getSupportTeam() != null && $supportTeam->getId() === $ticket->getSupportTeam()->getId()) {
-                        $json['success']  = 'Success';
+                        $json['success']  = $this->get('translator')->trans('Success');
                         $json['description'] = $this->get('translator')->trans('Ticket already assigned to support team');
                         $statusCode = Response::HTTP_OK;
                         return new JsonResponse($json, $statusCode);
@@ -827,8 +817,11 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket assigned to support team successfully');
+                    $json['description'] = $this->get('translator')->trans('Ticket assigned to support team %team%', [
+                        '%team%' => $supportTeam->getDescription()
+                    ]);
                     $statusCode = Response::HTTP_OK;
                     return new JsonResponse($json, $statusCode);
                 }
@@ -839,14 +832,14 @@ class Tickets extends Controller
 
                 if (empty($ticketType)) {
                     // Selected ticket priority does not exist
-                    $json['error']  = 'Error';
+                    $json['error']  = $this->get('translator')->trans('Error');
                     $json['description'] = $this->get('translator')->trans('Unable to retrieve ticket type details');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
 
                 if (null != $ticket->getType() && $ticketType->getId() === $ticket->getType()->getId()) {
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket type already set to ' . $ticketType->getDescription());
                     $statusCode = Response::HTTP_OK;
                     return new JsonResponse($json, $statusCode);
@@ -863,22 +856,27 @@ class Tickets extends Controller
 
                     $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Ticket type updated to ' . $ticketType->getDescription());
                     $statusCode = Response::HTTP_OK;
                     return new JsonResponse($json, $statusCode);
                 }
                 break;
             case 'label':
-                $label = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportLabel')->find($requestContent['labelId']);
-                if($label) {
+                $label = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportLabel')->find($requestContent['value']);
+                if ($label) {
                     $ticket->removeSupportLabel($label);
                     $entityManager->persist($ticket);
                     $entityManager->flush();
 
-                    $json['success']  = 'Success';
+                    $json['success']  = $this->get('translator')->trans('Success');
                     $json['description'] = $this->get('translator')->trans('Success ! Ticket to label removed successfully');
                     $statusCode = Response::HTTP_OK;
+                    return new JsonResponse($json, $statusCode);
+                } else {
+                    $json['error']  = $this->get('translator')->trans('Error');
+                    $json['description'] = $this->get('translator')->trans('No support level exist for this ticket with this id');
+                    $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
                 break;
