@@ -14,11 +14,22 @@ To require the api bundle into your symfony project, simply run the following fr
 ```bash
 $ composer require uvdesk/api-bundle
 ```
-after installing api bundle run the below command:
+After installing api bundle run the below command:
 
 ```bash
 $ php bin/console doctrine:schema:update --force
 ```
+Finally clear your project cache by below command(write prod if running in production environment i.e --env prod):
+
+```bash
+$ php bin/console cache:clear --env dev
+```
+
+Getting Started
+--------------
+
+* [Ticket Related APIs][6]
+
 License
 --------------
 
@@ -29,3 +40,4 @@ The API Bundle and libraries included within the bundle are released under the M
 [3]: https://symfony.com/4
 [4]: https://flex.symfony.com/
 [5]: https://getcomposer.org/
+[6]: https://github.com/uvdesk/api-bundle/wiki/Ticket-Related-APIs

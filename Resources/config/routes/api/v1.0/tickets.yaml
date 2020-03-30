@@ -24,3 +24,48 @@ uvdesk_api_bundle_api_tickets_v1.0_view_ticket:
     path:       /ticket/{ticketId}
     controller: Webkul\UVDesk\ApiBundle\API\Tickets::viewTicket
     methods:    [GET]
+
+uvdesk_api_bundle_api_tickets_v1.0_delete_ticket:
+    path:       /delete/ticket/{ticketId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::deleteTicketForever
+    methods:    [DELETE]
+    requirements:
+        ticketId: '\d+'
+        
+uvdesk_api_bundle_api_tickets_v1.0_show_ticketTypes:
+    path:     /ticket-types
+    controller: Webkul\UVDesk\ApiBundle\API\TicketTypes::ticketTypeList
+    methods:  [GET]
+
+uvdesk_api_bundle_api_tickets_v1.0_assign_agent_to_ticket:
+    path:   /ticket/{ticketId}/agent
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::assignAgent
+    methods: [PUT]
+    requirements:
+        ticketId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_add_remove_collaborator:
+    path: /ticket/{ticketId}/collaborator
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::addRemoveTicketCollaborator
+    methods: [POST, DELETE]
+    requirements:
+        ticketId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_download_attachment:
+    path: /ticket/attachment/{attachmentId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::downloadAttachment
+    methods: [POST]
+    requirements:
+        attachmentId: '\d+'
+
+uvdesk_api_bundle_api_tickets_v1.0_download_attachment_zip:
+    path:     /ticket/download-zip/{threadId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::downloadZipAttachment
+    methods: [POST]
+    requirements:
+        threadId: '\d+'
+        
+uvdesk_api_bundle_api_tickets_v1.0_edit_ticket_property:
+    path: /ticket/{ticketId}
+    controller: Webkul\UVDesk\ApiBundle\API\Tickets::editTicketProperties
+    methods: [PATCH]
