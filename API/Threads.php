@@ -55,7 +55,7 @@ class Threads extends Controller
             $actAsType = strtolower($data['actAsType']);
             $actAsEmail = $data['actAsEmail'];
             if ($actAsType == 'customer') {
-                $customer = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+                $user = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
             } else if($actAsType == 'agent' ) {
                 $user = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
             } else {
@@ -72,7 +72,7 @@ class Threads extends Controller
         if ($actAsType == 'agent') {
             $data['user'] = isset($user) && $user ? $user : $this->get('user.service')->getCurrentUser();
         } else {
-            $data['user'] = $customer;
+            $data['user'] = $user;
         }
 
         $threadDetails = [
