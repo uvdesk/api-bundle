@@ -181,7 +181,7 @@ class Tickets extends Controller
                         return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
                     }
                 } else {
-                    $json['warning'] = $this->get('translator')->trans('Warning ! For Customer spacify actAsType as customer and for Agent spacify both parameter actASType  as agent and actAsEmail as agent email');
+                    $json['warning'] = $this->get('translator')->trans('Warning ! For Customer specify actAsType as customer and for Agent specify both parameter actASType  as agent and actAsEmail as agent email');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
