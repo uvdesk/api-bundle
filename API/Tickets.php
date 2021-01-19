@@ -204,6 +204,11 @@ class Tickets extends Controller
                 } else {
                     $data['user'] = $customer;
                 }
+
+                $attachments = [];
+                if(!empty($request->files->get('attachments'))) {
+                    $attachments = [$request->files->get('attachments')];
+                }
                 
                 $ticketData['user'] = $data['user'];
                 $ticketData['subject'] = $data['subject'];
@@ -212,7 +217,7 @@ class Tickets extends Controller
                 $ticketData['source'] = 'api';
                 $ticketData['threadType'] = 'create';
                 $ticketData['createdBy'] = $actAsType;
-                $ticketData['attachments'] = [$request->files->get('attachments')];
+                $ticketData['attachments'] = $attachments;
                 
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
                 

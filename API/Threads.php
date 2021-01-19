@@ -75,13 +75,18 @@ class Threads extends Controller
             $data['user'] = $user;
         }
 
+        $attachments = [];
+        if(!empty($request->files->get('attachments'))) {
+            $attachments = [$request->files->get('attachments')];
+        }
+
         $threadDetails = [
             'user' => $data['user'],
             'createdBy' => $actAsType,
             'source' => 'api',
             'threadType' => strtolower($data['threadType']),
             'message' => str_replace(['&lt;script&gt;', '&lt;/script&gt;'], '', $data['message']),
-            'attachments' => [$request->files->get('attachments')]
+            'attachments' => $attachments
         ];
 
         if (!empty($data['status'])){
