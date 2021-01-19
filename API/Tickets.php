@@ -212,7 +212,7 @@ class Tickets extends Controller
                 $ticketData['source'] = 'api';
                 $ticketData['threadType'] = 'create';
                 $ticketData['createdBy'] = $actAsType;
-                $ticketData['attachments'] = $request->files->get('attachments');
+                $ticketData['attachments'] = [$request->files->get('attachments')];
                 
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
                 

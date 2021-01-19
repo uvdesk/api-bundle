@@ -81,7 +81,7 @@ class Threads extends Controller
             'source' => 'api',
             'threadType' => strtolower($data['threadType']),
             'message' => str_replace(['&lt;script&gt;', '&lt;/script&gt;'], '', $data['message']),
-            'attachments' => $request->files->get('attachments')
+            'attachments' => [$request->files->get('attachments')]
         ];
 
         if (!empty($data['status'])){
