@@ -205,9 +205,9 @@ class Tickets extends Controller
                     $data['user'] = $customer;
                 }
 
-                $attachments = [];
-                if(!empty($request->files->get('attachments'))) {
-                    $attachments = [$request->files->get('attachments')];
+                $attachments = $request->files->get('attachments');
+                if (!empty($attachments)) {
+                        $attachments = is_array($attachments) ? $attachments : [$attachments];
                 }
                 
                 $ticketData['user'] = $data['user'];
