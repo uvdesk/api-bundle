@@ -220,6 +220,11 @@ class Tickets extends Controller
                 $ticketData['attachments'] = $attachments;
                 
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
+
+                if (array_key_exists('type', $data)) {
+                    $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneByCode($data['type']);
+                    $ticketData['type'] = $ticketType;
+                }
                 
                 $requestData = $data;
                 foreach ($extraKeys as $key) {
