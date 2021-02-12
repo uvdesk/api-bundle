@@ -514,9 +514,9 @@ class Tickets extends Controller
     */
     public function downloadAttachment(Request $request) 
     {
-        $attachmendId = $request->attributes->get('attachmentId');
+        $attachmentId = $request->attributes->get('attachmentId');
         $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
-        $attachment = $attachmentRepository->findOneById($attachmendId);
+        $attachment = $attachmentRepository->findOneById($attachmentId);
         $baseurl = $request->getScheme() . '://' . $request->getHttpHost() . $request->getBasePath();
 
         if (!$attachment) {
