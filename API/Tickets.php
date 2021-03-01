@@ -31,10 +31,11 @@ class Tickets extends Controller
         if ($request->query->get('actAsType')) {    
             switch($request->query->get('actAsType')) {
                 case 'customer': 
-                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+                    $email = $request->query->get('actAsEmail');
+                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
 
                     if ($customer) {
-                        $json = $repository->getAllCustomerTickets($request->query, $this->container, $customer);
+                        $json = $ticketRepository->getAllCustomerTickets($request->query, $this->container, $customer);
                     } else {
                         $json['error'] = $this->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
