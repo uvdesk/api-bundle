@@ -43,8 +43,9 @@ class Tickets extends Controller
                     return new JsonResponse($json);
                     break;
                 case 'agent':
-                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
-
+                    $email = $request->query->get('actAsEmail');
+                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
+                    
                     if ($user) {
                         $request->query->set('agent', $user->getId());
                     } else {
