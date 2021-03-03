@@ -55,7 +55,7 @@ class Threads extends Controller
             $actAsType = strtolower($data['actAsType']);
             $actAsEmail = $data['actAsEmail'];
             if ($actAsType == 'customer') {
-                $customer = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+                $user = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
             } else if($actAsType == 'agent' ) {
                 $user = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
             } else {
@@ -72,7 +72,12 @@ class Threads extends Controller
         if ($actAsType == 'agent') {
             $data['user'] = isset($user) && $user ? $user : $this->get('user.service')->getCurrentUser();
         } else {
-            $data['user'] = $customer;
+            $data['user'] = $user;
+        }
+
+        $attachments = $request->files->get('attachments');
+        if (!empty($attachments)) {
+            $attachments = is_array($attachments) ? $attachments : [$attachments];
         }
 
         $threadDetails = [
@@ -81,7 +86,7 @@ class Threads extends Controller
             'source' => 'api',
             'threadType' => strtolower($data['threadType']),
             'message' => str_replace(['&lt;script&gt;', '&lt;/script&gt;'], '', $data['message']),
-            'attachments' => $request->files->get('attachments')
+            'attachments' => $attachments
         ];
 
         if (!empty($data['status'])){

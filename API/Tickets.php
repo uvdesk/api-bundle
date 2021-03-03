@@ -31,10 +31,11 @@ class Tickets extends Controller
         if ($request->query->get('actAsType')) {    
             switch($request->query->get('actAsType')) {
                 case 'customer': 
-                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+                    $email = $request->query->get('actAsEmail');
+                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
 
                     if ($customer) {
-                        $json = $repository->getAllCustomerTickets($request->query, $this->container, $customer);
+                        $json = $ticketRepository->getAllCustomerTickets($request->query, $this->container, $customer);
                     } else {
                         $json['error'] = $this->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
@@ -42,8 +43,9 @@ class Tickets extends Controller
                     return new JsonResponse($json);
                     break;
                 case 'agent':
-                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
-
+                    $email = $request->query->get('actAsEmail');
+                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
+                    
                     if ($user) {
                         $request->query->set('agent', $user->getId());
                     } else {
@@ -181,7 +183,7 @@ class Tickets extends Controller
                         return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
                     }
                 } else {
-                    $json['warning'] = $this->get('translator')->trans('Warning ! For Customer spacify actAsType as customer and for Agent spacify both parameter actASType  as agent and actAsEmail as agent email');
+                    $json['warning'] = $this->get('translator')->trans('Warning ! For Customer specify actAsType as customer and for Agent specify both parameter actASType  as agent and actAsEmail as agent email');
                     $statusCode = Response::HTTP_BAD_REQUEST;
                     return new JsonResponse($json, $statusCode);
                 }
@@ -204,6 +206,11 @@ class Tickets extends Controller
                 } else {
                     $data['user'] = $customer;
                 }
+
+                $attachments = $request->files->get('attachments');
+                if (!empty($attachments)) {
+                        $attachments = is_array($attachments) ? $attachments : [$attachments];
+                }
                 
                 $ticketData['user'] = $data['user'];
                 $ticketData['subject'] = $data['subject'];
@@ -212,9 +219,14 @@ class Tickets extends Controller
                 $ticketData['source'] = 'api';
                 $ticketData['threadType'] = 'create';
                 $ticketData['createdBy'] = $actAsType;
-                $ticketData['attachments'] = $request->files->get('attachments');
+                $ticketData['attachments'] = $attachments;
                 
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
+
+                if (array_key_exists('type', $data)) {
+                    $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneByCode($data['type']);
+                    $ticketData['type'] = $ticketType;
+                }
                 
                 $requestData = $data;
                 foreach ($extraKeys as $key) {
@@ -509,9 +521,9 @@ class Tickets extends Controller
     */
     public function downloadAttachment(Request $request) 
     {
-        $attachmendId = $request->attributes->get('attachmendId');
+        $attachmentId = $request->attributes->get('attachmentId');
         $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
-        $attachment = $attachmentRepository->findOneById($attachmendId);
+        $attachment = $attachmentRepository->findOneById($attachmentId);
         $baseurl = $request->getScheme() . '://' . $request->getHttpHost() . $request->getBasePath();
 
         if (!$attachment) {
