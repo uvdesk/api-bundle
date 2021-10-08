@@ -10,9 +10,9 @@
         }
     ],
     "require": {
-        "php": "^7.0",
-        "uvdesk/composer-plugin": "^1.0",
-        "uvdesk/core-framework": "^1.0.4"
+        "php": "^7.2 || ^8.0",
+        "uvdesk/composer-plugin": "@dev",
+        "uvdesk/core-framework": "@dev"
     },
     "autoload": {
         "psr-4": {
