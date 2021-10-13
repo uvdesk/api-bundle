@@ -3,16 +3,14 @@
     "description": "Easily integrate with your community helpdesk system using the uvdesk api bundle.",
     "type": "symfony-bundle",
     "license": "MIT",
-    "authors": [
-        {
-            "name": "Akshay Kumar",
-            "email": "akshay.kumar758@webkul.com"
-        }
-    ],
+    "authors": [{
+        "name": "Akshay Kumar",
+        "email": "akshay.kumar758@webkul.com"
+    }],
     "require": {
-        "php": "^7.2 || ^8.0",
-        "uvdesk/composer-plugin": "@dev",
-        "uvdesk/core-framework": "@dev"
+        "php": "^7.3 || ^8.0",
+        "uvdesk/composer-plugin": "^1.0",
+        "uvdesk/core-framework": "^1.0.4"
     },
     "autoload": {
         "psr-4": {
@@ -20,10 +18,7 @@
         }
     },
     "extra": {
-        "uvdesk-package-extension": "Webkul\\UVDesk\\ApiBundle\\Package\\PackageConfiguration",
-        "branch-alias": {
-            "dev-master": "1.0.x-dev"
-        }
+        "uvdesk-package-extension": "Webkul\\UVDesk\\ApiBundle\\Package\\PackageConfiguration"
     },
     "minimum-stability": "dev"
 }
