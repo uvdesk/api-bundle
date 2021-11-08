@@ -22,5 +22,5 @@
     "extra": {
         "uvdesk-package-extension": "Webkul\\UVDesk\\ApiBundle\\Package\\PackageConfiguration"
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "stable"
 }

@@ -1,5 +1,11 @@
 CHANGELOG for 1.0.x
 ===================
+* 1.0.4 (Released on 2021-11-08)
+
+   **Misc. Updates**
+      * **Compatibility with PHP 8.**
+      * **Composer 2 support.**
+
 * 1.0.3 (Released on 2021-03-03)
 
    **Bug Fixes**
