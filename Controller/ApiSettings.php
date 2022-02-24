@@ -9,11 +9,11 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
-class ApiSettings extends Controller
+class ApiSettings extends AbstractController
 {
     public function loadConfigurations()
     {
