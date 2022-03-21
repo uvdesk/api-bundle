@@ -118,7 +118,7 @@ class Tickets extends AbstractController
                 'entity' => $ticket,
             ]);
 
-            $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+            $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
         } else {
             $json['error'] = $container->get('translator')->trans('Warning ! Ticket is already in trash.');
             $statusCode = Response::HTTP_BAD_REQUEST;
@@ -243,7 +243,7 @@ class Tickets extends AbstractController
                     $event = new GenericEvent(CoreWorkflowEvents\Ticket\Create::getId(), [
                         'entity' =>  $thread->getTicket(),
                     ]);
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
                 } catch (\Exception $e) {
                     //
                 }
@@ -368,7 +368,7 @@ class Tickets extends AbstractController
                 'entity' => $ticket,
             ]);
 
-            $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+            $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
         } else {
             $json['error'] = $container->get('translator')->trans('Warning ! something went wrong.');
             $statusCode = Response::HTTP_BAD_REQUEST;
@@ -414,7 +414,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
         
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
                     
                 } else {
                     $json['error'] = $container->get('translator')->trans('invalid resource');
@@ -488,7 +488,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success'] =  $container->get('translator')->trans('Success ! Collaborator added successfully.');
                     $statusCode = Response::HTTP_OK;
@@ -521,7 +521,7 @@ class Tickets extends AbstractController
      * @param Request $request
      * @return void
     */
-    public function downloadAttachment(Request $request) 
+    public function downloadAttachment(Request $request, ContainerInterface $container) 
     {
         $attachmentId = $request->attributes->get('attachmentId');
         $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
@@ -654,7 +654,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] = $container->get('translator')->trans('Ticket successfully assigned to %agent%', [
@@ -692,7 +692,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  =  $container->get('translator')->trans('Success');
                     $json['description'] =  $container->get('translator')->trans('Ticket status update to %status%', [
@@ -730,7 +730,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] =  $container->get('translator')->trans('Ticket priority updated to %priority%', [
@@ -778,7 +778,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  = $container->get('translator')->trans('Success');
                     
@@ -829,7 +829,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] = $container->get('translator')->trans('Ticket assigned to support team successfully');
@@ -868,7 +868,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
 
-                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] = $container->get('translator')->trans('Ticket type updated to ' . $ticketType->getDescription());
