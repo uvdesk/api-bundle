@@ -9,18 +9,18 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
-
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Threads extends AbstractController
 {
     /** Ticket Reply
      * @param Request $request
      */
-    public function saveThread(Request $request, $ticketid)
+    public function saveThread(Request $request, $ticketid, ContainerInterface $container)
     {
         $data = $request->request->all()? : json_decode($request->getContent(),true);
 
@@ -70,7 +70,7 @@ class Threads extends AbstractController
         } 
 
         if ($actAsType == 'agent') {
-            $data['user'] = isset($user) && $user ? $user : $this->get('user.service')->getCurrentUser();
+            $data['user'] = isset($user) && $user ? $user : $container->get('user.service')->getCurrentUser();
         } else {
             $data['user'] = $user;
         }
@@ -110,7 +110,7 @@ class Threads extends AbstractController
         }
 
         // Create Thread
-        $thread = $this->get('ticket.service')->createThread($ticket, $threadDetails);
+        $thread = $container->get('ticket.service')->createThread($ticket, $threadDetails);
 
         // Check for thread types
         switch ($thread->getThreadType()) {
@@ -119,7 +119,7 @@ class Threads extends AbstractController
                     'entity' =>  $ticket,
                     'thread' =>  $thread
                 ]);
-                $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
                 $json['success'] = "success', Note added to ticket successfully.";
                 return new JsonResponse($json, Response::HTTP_OK);
@@ -129,7 +129,7 @@ class Threads extends AbstractController
                     'entity' =>  $ticket,
                     'thread' =>  $thread
                 ]);
-                $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
 
                 $json['success'] = "success', Reply added to ticket successfully..";
                 return new JsonResponse($json, Response::HTTP_OK);
@@ -152,7 +152,7 @@ class Threads extends AbstractController
 
                 // Forward thread to users
                 try {
-                    $messageId = $this->get('email.service')->sendMail($params['subject'] ?? ("Forward: " . $ticket->getSubject()), $thread->getMessage(), $thread->getReplyTo(), $headers, $ticket->getMailboxEmail(), $attachments ?? [], $thread->getCc() ?: [], $thread->getBcc() ?: []);
+                    $messageId = $container->get('email.service')->sendMail($params['subject'] ?? ("Forward: " . $ticket->getSubject()), $thread->getMessage(), $thread->getReplyTo(), $headers, $ticket->getMailboxEmail(), $attachments ?? [], $thread->getCc() ?: [], $thread->getBcc() ?: []);
     
                     if (!empty($messageId)) {
                         $thread->setMessageId($messageId);

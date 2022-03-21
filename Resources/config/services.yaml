@@ -11,6 +11,10 @@ services:
     Webkul\UVDesk\ApiBundle\Controller\:
         resource: '../../Controller/*'
         tags: ['controller.service_arguments']
+        
+    Webkul\UVDesk\ApiBundle\API\:
+        resource: '../../API/*'
+        tags: ['controller.service_arguments']
     
     Webkul\UVDesk\ApiBundle\Providers\ApiCredentials:
         arguments: ['@security.firewall.map']
