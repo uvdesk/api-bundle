@@ -119,7 +119,7 @@ class Threads extends AbstractController
                     'entity' =>  $ticket,
                     'thread' =>  $thread
                 ]);
-                $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Note added to ticket successfully.";
                 return new JsonResponse($json, Response::HTTP_OK);
@@ -129,7 +129,7 @@ class Threads extends AbstractController
                     'entity' =>  $ticket,
                     'thread' =>  $thread
                 ]);
-                $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Reply added to ticket successfully..";
                 return new JsonResponse($json, Response::HTTP_OK);
