@@ -145,7 +145,7 @@ class Threads extends AbstractController
                 // Prepare attachments
                 $attachments = $entityManager->getRepository(Attachment::class)->findByThread($thread);
 
-                $projectDir = $this->get('kernel')->getProjectDir();
+                $projectDir = $container->get('kernel')->getProjectDir();
                 $attachments = array_map(function($attachment) use ($projectDir) {
                 return str_replace('//', '/', $projectDir . "/public" . $attachment->getPath());
                 }, $attachments);

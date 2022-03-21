@@ -37,7 +37,7 @@ class Tickets extends AbstractController
                     $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
 
                     if ($customer) {
-                        $json = $ticketRepository->getAllCustomerTickets($request->query, $this->container, $customer);
+                        $json = $ticketRepository->getAllCustomerTickets($request->query, $container, $customer);
                     } else {
                         $json['error'] = $container->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
@@ -61,7 +61,7 @@ class Tickets extends AbstractController
             }
         }
 
-        $json = $ticketRepository->getAllTickets($request->query, $this->container);
+        $json = $ticketRepository->getAllTickets($request->query, $container);
 
         $json['userDetails'] = [
             'user' => $this->getUser()->getId(),
@@ -110,7 +110,7 @@ class Tickets extends AbstractController
             $entityManager->persist($ticket);
             $entityManager->flush();
 
-            $json['success'] = $this->get('translator')->trans('Success ! Ticket moved to trash successfully.');
+            $json['success'] = $container->get('translator')->trans('Success ! Ticket moved to trash successfully.');
             $statusCode = Response::HTTP_OK;
 
             // Trigger ticket delete event
@@ -118,7 +118,7 @@ class Tickets extends AbstractController
                 'entity' => $ticket,
             ]);
 
-            $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+            $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
         } else {
             $json['error'] = $container->get('translator')->trans('Warning ! Ticket is already in trash.');
             $statusCode = Response::HTTP_BAD_REQUEST;
@@ -414,7 +414,7 @@ class Tickets extends AbstractController
                         'entity' => $ticket,
                     ]);
         
-                    $this->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
+                    $container->get('event_dispatcher')->dispatch('uvdesk.automation.workflow.execute', $event);
                     
                 } else {
                     $json['error'] = $container->get('translator')->trans('invalid resource');
@@ -532,7 +532,7 @@ class Tickets extends AbstractController
             throw new NotFoundHttpException('Page Not Found');
         }
 
-        $path = $this->get('kernel')->getProjectDir() . "/public/". $attachment->getPath();
+        $path = $container->get('kernel')->getProjectDir() . "/public/". $attachment->getPath();
 
         $response = new Response();
         $response->setStatusCode(200);
