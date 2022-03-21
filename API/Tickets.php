@@ -150,7 +150,7 @@ class Tickets extends AbstractController
         if($data) {
             $error = false;
             $message = '';
-            $entityManager = $container->getDoctrine()->getManager();
+            $entityManager = $this->getDoctrine()->getManager();
 
             if ($data['subject'] == '') {
                 $message = $container->get('translator')->trans("Warning! Please complete subject field value!");
