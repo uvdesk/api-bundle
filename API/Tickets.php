@@ -10,6 +10,7 @@ use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
@@ -101,7 +102,7 @@ class Tickets extends AbstractController
         $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($ticketId);
         
         if (!$ticket) {
-            $this->noResultFound();
+            throw new NotFoundHttpException('Page Not Found');
         }
 
         if (!$ticket->getIsTrashed()) {
@@ -352,7 +353,7 @@ class Tickets extends AbstractController
         $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($ticketId);
         
         if (!$ticket) {
-            $this->noResultFound();
+            throw new NotFoundHttpException('Page Not Found');
         }
 
         if ($ticket->getIsTrashed()) {
@@ -528,7 +529,7 @@ class Tickets extends AbstractController
         $baseurl = $request->getScheme() . '://' . $request->getHttpHost() . $request->getBasePath();
 
         if (!$attachment) {
-            $this->noResultFound();
+            throw new NotFoundHttpException('Page Not Found');
         }
 
         $path = $this->get('kernel')->getProjectDir() . "/public/". $attachment->getPath();
@@ -558,7 +559,7 @@ class Tickets extends AbstractController
         $attachment = $attachmentRepository->findByThread($threadId);
 
         if (!$attachment) {
-            $this->noResultFound();
+            throw new NotFoundHttpException('Page Not Found');
         }
 
         $zipname = 'attachments/' .$threadId.'.zip';
