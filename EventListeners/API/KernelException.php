@@ -5,7 +5,7 @@ namespace Webkul\UVDesk\ApiBundle\EventListeners\API;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\SecurityBundle\Security\FirewallMap;
-use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class KernelException
@@ -17,10 +17,10 @@ class KernelException
         $this->firewall = $firewall;
     }
 
-    public function onKernelException(GetResponseForExceptionEvent $event)
+    public function onKernelException(ExceptionEvent $event)
     {
         $request = $event->getRequest();
-        $exception = $event->getException();
+        $exception = $event->getThrowable();
 
         // Proceed only if we're in the 'uvdesk_api' firewall
         if ('uvdesk_api' != $this->firewall->getFirewallConfig($request)->getName()) {

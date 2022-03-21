@@ -7,6 +7,10 @@ services:
     Webkul\UVDesk\ApiBundle\:
         resource: '../../*'
         exclude: '../../{DependencyInjection,Templates,Package}'
+
+    Webkul\UVDesk\ApiBundle\Controller\:
+        resource: '../../Controller/*'
+        tags: ['controller.service_arguments']
     
     Webkul\UVDesk\ApiBundle\Providers\ApiCredentials:
         arguments: ['@security.firewall.map']
