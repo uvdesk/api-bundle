@@ -450,7 +450,7 @@ class Tickets extends AbstractController
             return new JsonResponse($json, Response::HTTP_NOT_FOUND);
         }
 
-        if($request->getMethod() == "POST") { 
+        if($request->getMethod() == "POST" && !$content['id']) { 
             if(!isset($content['email']) || !filter_var($content['email'], FILTER_VALIDATE_EMAIL)) {
                 $json['error'] = $container->get('translator')->trans('missing/invalid field');
                 $json['message'] = $container->get('translator')->trans('required: email');
@@ -497,7 +497,7 @@ class Tickets extends AbstractController
                     $statusCode = Response::HTTP_BAD_REQUEST;
                 }
             }
-        } elseif($request->getMethod() == "DELETE") {
+        } elseif($request->getMethod() == "POST" &&  $content['id']) {
             $collaborator = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneBy(array('id' => $content['id']));
             if($collaborator) {
                 $ticket->removeCollaborator($collaborator);
