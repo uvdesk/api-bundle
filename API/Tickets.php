@@ -329,7 +329,7 @@ class Tickets extends AbstractController
       
         return new JsonResponse([
             'ticket' => $ticket,
-            'totalCustomerTickets' => ($ticketRepository->countCustomerTotalTickets($customer)),
+            'totalCustomerTickets' => ($ticketRepository->countCustomerTotalTickets($customer, $container)),
             'ticketAgent' => !empty($agent) ? $agent->getAgentInstance()->getPartialDetails() : null,
             'customer' => $customer->getCustomerInstance()->getPartialDetails(),
             'supportGroupCollection' => $userRepository->getSupportGroups(),
@@ -911,13 +911,14 @@ class Tickets extends AbstractController
         $object->formatedCreatedAt = new \Datetime;
         $encoders = array(new XmlEncoder(), new JsonEncoder());
         $normalizer = new ObjectNormalizer();
-        $normalizer->setCircularReferenceHandler(function ($object) {
-            return $object->getId();
-        });
-
         $normalizers = array($normalizer);
+        
         $serializer = new Serializer($normalizers, $encoders);
-        $jsonContent = $serializer->serialize($object, 'json');
+        $jsonContent = $serializer->serialize($object, 'json', [
+            'circular_reference_handler' => function ($object) {
+                return $object->getId();
+            }
+        ]);
 
         return $jsonContent;
     }
