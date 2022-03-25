@@ -1,5 +1,22 @@
 CHANGELOG for 1.0.x
 ===================
+* 1.0.4 (Released on 2021-11-08)
+   **Misc. Updates**
+      * **Compatibility with PHP 8.**
+      * **Composer 2 support.**
+
+* 1.0.3 (Released on 2021-03-03)
+   **Bug Fixes**
+      * **Issue #16:** I can't fetch tickets belonging to a particular email.
+      * **Issue #15:** I can't assign a ticket using the API.
+      * **Issue #14:** API GET tickets ActAsType customer.
+      * **Issue #13:** Still Cannot Create Multiple attachments for a ticket.
+      * **Issue #12:** create with multiple attachments.
+      * **Issue #11:** Cannot download attachment from uvdesk api bundle.
+      * **Issue #9:** Can not reply a thread.
+      * **Issue #8:** Create new ticket with attachment Fixed in master.
+      * **Issue #7:** No route found.
+      * **Issue #6:** Unable to assign ticket type when creating.
 
 * 1.0.2 (Released on 2020-03-30)
 
