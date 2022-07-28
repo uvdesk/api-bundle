@@ -2,12 +2,12 @@
 
 namespace Webkul\UVDesk\ApiBundle\API;
 
-use Webkul\TicketBundle\Entity\Ticket;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\EventDispatcher\GenericEvent;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketType;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 
 class TicketTypes extends AbstractController
@@ -20,15 +20,16 @@ class TicketTypes extends AbstractController
     */
     public function ticketTypeList(Request $request) 
     {
-        $json = [];
         $entityManager = $this->getDoctrine()->getManager();
-        $ticketTypes =  $entityManager->createQueryBuilder()
-                                      ->select("TT")
-                                      ->from('UVDeskCoreFrameworkBundle:TicketType', 'TT')
-                                      ->Where('TT.isActive = 1')
-                                      ->getQuery()->getArrayResult();
+        $queryBuilder = $entityManager->createQueryBuilder()
+            ->select("ticket_type")
+            ->from(TicketType::class, 'ticket_type')
+            ->where('ticket_type.isActive = 1')
+        ;
 
-        return new JsonResponse($ticketTypes); 
+        $collection = $queryBuilder->getQuery()->getArrayResult();
+
+        return new JsonResponse($collection);
     }
 }
 
