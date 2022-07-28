@@ -2,19 +2,28 @@
 
 namespace Webkul\UVDesk\ApiBundle\API;
 
-use Webkul\TicketBundle\Entity\Ticket;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\EventDispatcher\GenericEvent;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
-use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\EventDispatcher\GenericEvent;
+use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\Attachment;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportGroup;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportLabel;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportRole;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportTeam;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketPriority;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketType;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 
 class Tickets extends AbstractController
 {
@@ -27,14 +36,14 @@ class Tickets extends AbstractController
     {
         $json = [];
         $entityManager = $this->getDoctrine()->getManager();
-        $ticketRepository = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:Ticket');
-        $userRepository = $this->getDoctrine()->getRepository('UVDeskCoreFrameworkBundle:User');
+        $ticketRepository = $this->getDoctrine()->getRepository(Ticket::class);
+        $userRepository = $this->getDoctrine()->getRepository(User::class);
 
         if ($request->query->get('actAsType')) {    
             switch($request->query->get('actAsType')) {
                 case 'customer': 
                     $email = $request->query->get('actAsEmail');
-                    $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
+                    $customer = $entityManager->getRepository(User::class)->findOneByEmail($email);
 
                     if ($customer) {
                         $json = $ticketRepository->getAllCustomerTickets($request->query, $container, $customer);
@@ -46,7 +55,7 @@ class Tickets extends AbstractController
                     break;
                 case 'agent':
                     $email = $request->query->get('actAsEmail');
-                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($email);
+                    $user = $entityManager->getRepository(User::class)->findOneByEmail($email);
                     
                     if ($user) {
                         $request->query->set('agent', $user->getId());
@@ -99,7 +108,7 @@ class Tickets extends AbstractController
     {
         $ticketId = $request->attributes->get('ticketId');
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($ticketId);
+        $ticket = $entityManager->getRepository(Ticket::class)->find($ticketId);
         
         if (!$ticket) {
             throw new NotFoundHttpException('Page Not Found');
@@ -176,7 +185,7 @@ class Tickets extends AbstractController
                 if ((array_key_exists('actAsType', $data)) && strtolower($data['actAsType']) == 'customer') {
                     $actAsType = strtolower($data['actAsType']);             
                 } else if((array_key_exists('actAsEmail', $data)) && strtolower($data['actAsType']) == 'agent') {
-                    $user = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['actAsEmail']);
+                    $user = $entityManager->getRepository(User::class)->findOneByEmail($data['actAsEmail']);
                     
                     if ($user) {
                         $actAsType = 'agent';
@@ -191,10 +200,10 @@ class Tickets extends AbstractController
                 }
                 
                 // Create customer if account does not exists
-                $customer = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneByEmail($data['from']);
+                $customer = $entityManager->getRepository(User::class)->findOneByEmail($data['from']);
              
                 if (empty($customer) || null == $customer->getCustomerInstance()) {
-                    $role = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportRole')->findOneByCode('ROLE_CUSTOMER');
+                    $role = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
                   
                     // Create User Instance
                     $customer = $container->get('user.service')->createUserInstance($data['from'], $data['name'], $role, [
@@ -226,7 +235,7 @@ class Tickets extends AbstractController
                 $extraKeys = ['tags', 'group', 'priority', 'status', 'agent', 'createdAt', 'updatedAt'];
 
                 if (array_key_exists('type', $data)) {
-                    $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneByCode($data['type']);
+                    $ticketType = $entityManager->getRepository(TicketType::class)->findOneByCode($data['type']);
                     $ticketData['type'] = $ticketType;
                 }
                 
@@ -274,8 +283,8 @@ class Tickets extends AbstractController
     public function viewTicket($ticketId, Request $request, ContainerInterface $container)
     {
         $entityManager = $this->getDoctrine()->getManager();
-        $userRepository = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User');
-        $ticketRepository = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket');
+        $userRepository = $entityManager->getRepository(User::class);
+        $ticketRepository = $entityManager->getRepository(Ticket::class);
 
         $ticket = $ticketRepository->findOneById($ticketId);
 
@@ -302,7 +311,7 @@ class Tickets extends AbstractController
                 'colorCode' => $statusCollection->getColorCode(),
                 'description' => $statusCollection->getDescription(),
             ];
-        }, $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketStatus')->findAll());
+        }, $entityManager->getRepository(TicketStatus::class)->findAll());
 
         // Ticket Type Collection
         $type = array_map(function ($ticketTypeCollection) {
@@ -312,7 +321,7 @@ class Tickets extends AbstractController
                 'isActive' => $ticketTypeCollection->getIsActive(),
                 'description' => $ticketTypeCollection->getDescription(),
             ];
-        }, $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findByIsActive(true));
+        }, $entityManager->getRepository(TicketType::class)->findByIsActive(true));
 
         // Priority Collection
         $priority = array_map(function ($ticketPriorityCollection) {
@@ -322,7 +331,7 @@ class Tickets extends AbstractController
                 'colorCode' => $ticketPriorityCollection->getColorCode(),
                 'description' => $ticketPriorityCollection->getDescription(),
             ];
-        }, $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketPriority')->findAll());
+        }, $entityManager->getRepository(TicketPriority::class)->findAll());
       
         $ticketObj = $ticket;
         $ticket = json_decode($this->objectSerializer($ticketObj), true);
@@ -350,7 +359,7 @@ class Tickets extends AbstractController
     {
         $ticketId = $request->attributes->get('ticketId');
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($ticketId);
+        $ticket = $entityManager->getRepository(Ticket::class)->find($ticketId);
         
         if (!$ticket) {
             throw new NotFoundHttpException('Page Not Found');
@@ -389,11 +398,11 @@ class Tickets extends AbstractController
         $data = $request->request->all() ? :json_decode($request->getContent(), true);
         $ticketId = $request->attributes->get('ticketId');
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->findOneBy(array('id' => $ticketId));
+        $ticket = $entityManager->getRepository(Ticket::class)->findOneBy(array('id' => $ticketId));
     
         if ($ticket) {
             if (isset($data['id'])) {
-                $agent = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->find($data['id']);
+                $agent = $entityManager->getRepository(User::class)->find($data['id']);
             } else {
                 $json['error'] = $container->get('translator')->trans('missing fields');   
                 $json['description'] = $container->get('translator')->trans('required: id ');     
@@ -444,7 +453,7 @@ class Tickets extends AbstractController
         $content = $request->request->all()? : json_decode($request->getContent(), true);
 
         $entityManager = $this->getDoctrine()->getManager();
-        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->find($request->attributes->get('ticketId'));
+        $ticket = $entityManager->getRepository(Ticket::class)->find($request->attributes->get('ticketId'));
         if(!$ticket) {
             $json['error'] =  $container->get('translator')->trans('resource not found');
             return new JsonResponse($json, Response::HTTP_NOT_FOUND);
@@ -468,9 +477,9 @@ class Tickets extends AbstractController
                     'role' => 4,
                 );
                 
-                $supportRole = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportRole')->findOneByCode('ROLE_CUSTOMER');
+                $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
                 $collaborator = $container->get('user.service')->createUserInstance($data['from'], $data['firstName'], $supportRole, $extras = ["active" => true]);
-                $checkTicket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->isTicketCollaborator($ticket, $content['email']);
+                $checkTicket = $entityManager->getRepository(Ticket::class)->isTicketCollaborator($ticket, $content['email']);
 
                 if (!$checkTicket) { 
                     $ticket->addCollaborator($collaborator);
@@ -498,7 +507,7 @@ class Tickets extends AbstractController
                 }
             }
         } elseif($request->getMethod() == "POST"  &&  isset($content['id']) ) {
-            $collaborator = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneBy(array('id' => $content['id']));
+            $collaborator = $entityManager->getRepository(User::class)->findOneBy(array('id' => $content['id']));
             
             if($collaborator) {
                 $ticket->removeCollaborator($collaborator);
@@ -525,7 +534,7 @@ class Tickets extends AbstractController
     public function downloadAttachment(Request $request, ContainerInterface $container) 
     {
         $attachmentId = $request->attributes->get('attachmentId');
-        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
+        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository(Attachment::class);
         $attachment = $attachmentRepository->findOneById($attachmentId);
         $baseurl = $request->getScheme() . '://' . $request->getHttpHost() . $request->getBasePath();
 
@@ -555,7 +564,7 @@ class Tickets extends AbstractController
     public function downloadZipAttachment(Request $request)
     {
         $threadId = $request->attributes->get('threadId');
-        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository('UVDeskCoreFrameworkBundle:Attachment');
+        $attachmentRepository = $this->getDoctrine()->getManager()->getRepository(Attachment::class);
 
         $attachment = $attachmentRepository->findByThread($threadId);
 
@@ -599,7 +608,7 @@ class Tickets extends AbstractController
         $entityManager = $this->getDoctrine()->getManager();
         $requestContent = $request->request->all() ?: json_decode($request->getContent(), true);
         $ticketId =  $request->attributes->get('ticketId');
-        $ticket = $entityManager->getRepository('UVDeskCoreFrameworkBundle:Ticket')->findOneById($ticketId);
+        $ticket = $entityManager->getRepository(Ticket::class)->findOneById($ticketId);
         // Validate request integrity
         if (empty($ticket)) {
             $json['error']  = 'invalid resource';
@@ -617,7 +626,7 @@ class Tickets extends AbstractController
         // Update property
         switch ($requestContent['property']) {
             case 'agent':
-                $agent = $entityManager->getRepository('UVDeskCoreFrameworkBundle:User')->findOneById($requestContent['value']);
+                $agent = $entityManager->getRepository(User::class)->findOneById($requestContent['value']);
                 if (empty($agent)) {
                     // User does not exist
                     $json['error']  = $container->get('translator')->trans('No such user exist');
@@ -666,7 +675,7 @@ class Tickets extends AbstractController
                 }
                 break;
             case 'status':
-                $ticketStatus = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketStatus')->findOneById((int) $requestContent['value']);
+                $ticketStatus = $entityManager->getRepository(TicketStatus::class)->findOneById((int) $requestContent['value']);
 
                 if (empty($ticketStatus)) {
                     // Selected ticket status does not exist
@@ -704,7 +713,7 @@ class Tickets extends AbstractController
                 break;
             case 'priority':
                 // $container->isAuthorized('ROLE_AGENT_UPDATE_TICKET_PRIORITY');
-                $ticketPriority = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketPriority')->findOneById($requestContent['value']);
+                $ticketPriority = $entityManager->getRepository(TicketPriority::class)->findOneById($requestContent['value']);
 
                 if (empty($ticketPriority)) {
                     // Selected ticket priority does not exist
@@ -742,7 +751,7 @@ class Tickets extends AbstractController
                 }
                 break;
             case 'group':
-                $supportGroup = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportGroup')->findOneById($requestContent['value']);
+                $supportGroup = $entityManager->getRepository(SupportGroup::class)->findOneById($requestContent['value']);
 
                 if (empty($supportGroup)) {
                     if ($requestContent['value'] == "") {
@@ -793,7 +802,7 @@ class Tickets extends AbstractController
                 }
                 break;
             case 'team':
-                $supportTeam = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportTeam')->findOneById($requestContent['value']);
+                $supportTeam = $entityManager->getRepository(SupportTeam::class)->findOneById($requestContent['value']);
 
                 if (empty($supportTeam)) {
                     if ($requestContent['value'] == "") {
@@ -843,7 +852,7 @@ class Tickets extends AbstractController
                 break;
             case 'type':
                 // $container->isAuthorized('ROLE_AGENT_UPDATE_TICKET_TYPE');
-                $ticketType = $entityManager->getRepository('UVDeskCoreFrameworkBundle:TicketType')->findOneById($requestContent['value']);
+                $ticketType = $entityManager->getRepository(TicketType::class)->findOneById($requestContent['value']);
 
                 if (empty($ticketType)) {
                     // Selected ticket priority does not exist
@@ -878,7 +887,7 @@ class Tickets extends AbstractController
                 }
                 break;
             case 'label':
-                $label = $entityManager->getRepository('UVDeskCoreFrameworkBundle:SupportLabel')->find($requestContent['value']);
+                $label = $entityManager->getRepository(SupportLabel::class)->find($requestContent['value']);
                 if ($label) {
                     $ticket->removeSupportLabel($label);
                     $entityManager->persist($ticket);
