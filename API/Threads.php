@@ -117,20 +117,24 @@ class Threads extends AbstractController
         // Check for thread types
         switch ($thread->getThreadType()) {
             case 'note':
-                $event = new GenericEvent(CoreWorkflowEvents\Ticket\Note::getId(), [
-                    'entity' =>  $ticket,
-                    'thread' =>  $thread
-                ]);
-                $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
+                $event = new CoreWorkflowEvents\Ticket\Note();
+                $event
+                    ->setTicket($ticket)
+                    ->setThread($thread)
+                ;
+
+                $this->container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Note added to ticket successfully.";
                 return new JsonResponse($json, Response::HTTP_OK);
                 break;
             case 'reply':
-                $event = new GenericEvent(CoreWorkflowEvents\Ticket\AgentReply::getId(), [
-                    'entity' =>  $ticket,
-                    'thread' =>  $thread
-                ]);
+                $event = new CoreWorkflowEvents\Ticket\AgentReply();
+                $event
+                    ->setTicket($ticket)
+                    ->setThread($thread)
+                ;
+
                 $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Reply added to ticket successfully..";
