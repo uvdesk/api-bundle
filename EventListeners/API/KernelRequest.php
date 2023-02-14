@@ -2,13 +2,13 @@
 
 namespace Webkul\UVDesk\ApiBundle\EventListeners\API;
 
+use Symfony\Bundle\SecurityBundle\Security\FirewallMap;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Bundle\SecurityBundle\Security\FirewallMap;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpKernel\Event\ResponseEvent;
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 
 class KernelRequest
 {
@@ -26,8 +26,8 @@ class KernelRequest
         }
         
         $request = $event->getRequest();
-        $method  = $request->getRealMethod();
-        if ('OPTIONS' == $method) {
+
+        if ('OPTIONS' == $request->getRealMethod()) {
             $event->setResponse(new Response());
         }
 
@@ -37,16 +37,19 @@ class KernelRequest
     public function onKernelResponse(ResponseEvent $event)
     {
         $request = $event->getRequest();
+
         if (!$event->isMasterRequest()) {
             return;
         }
+
+        $response = $event->getResponse();
+
         if ('OPTIONS' == $request->getRealMethod() || 'POST' == $request->getRealMethod() || 'GET' == $request->getRealMethod()) {
-            $response = $event->getResponse();
             $response->headers->set('Access-Control-Allow-Origin', '*');
             $response->headers->set('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
             $response->headers->set('Access-Control-Allow-Headers', ['Access-Control-Allow-Origin', 'Authorization', 'Content-Type']);
         }
-        
+
         return;
     }
 }

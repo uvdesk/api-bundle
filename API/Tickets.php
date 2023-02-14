@@ -334,10 +334,10 @@ class Tickets extends AbstractController
         }, $entityManager->getRepository(TicketPriority::class)->findAll());
       
         $ticketObj = $ticket;
-        $ticket = json_decode($this->objectSerializer($ticketObj), true);
+        $serializedTicket = json_decode($this->objectSerializer($ticketObj), true);
       
         return new JsonResponse([
-            'ticket' => $ticket,
+            'ticket' => $serializedTicket,
             'totalCustomerTickets' => ($ticketRepository->countCustomerTotalTickets($customer, $container)),
             'ticketAgent' => !empty($agent) ? $agent->getAgentInstance()->getPartialDetails() : null,
             'customer' => $customer->getCustomerInstance()->getPartialDetails(),

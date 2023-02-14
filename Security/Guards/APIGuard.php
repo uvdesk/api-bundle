@@ -24,14 +24,7 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     const API_UNAUTHORIZED = 'API-001';
     const API_NOT_AUTHENTICATED = 'API-002';
-    const API_INSUFFICIENT_PARAMS = 'API-003';
-
-    /**
-     * [CC-*] Campus Connect Exception Codes
-     */
-    const USER_NOT_FOUND = 'CC-001';
-    const INVALID_CREDNETIALS = 'CC-002';
-    const UNEXPECTED_ERROR = 'CC-005';
+    const API_UNEXPECTED_ERROR = 'API-003';
 
     public function __construct(FirewallMap $firewall, ContainerInterface $container, EntityManagerInterface $entityManager)
 	{
@@ -53,19 +46,26 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getCredentials(Request $request)
     {
-        if (strpos(strtolower($request->headers->get('Authorization')), 'basic') === 0) {
-            $authorization_key = substr($request->headers->get('Authorization'), 6);
+        if ($request->headers->get('Authorization') != null) {
+            $authorizationToken = null;
+            
+            if (strpos(strtolower($request->headers->get('Authorization')), 'basic') === 0) {
+                $authorizationToken = substr($request->headers->get('Authorization'), 6);
+            } else if (strpos(strtolower($request->headers->get('Authorization')), 'bearer') === 0) {
+                $authorizationToken = substr($request->headers->get('Authorization'), 7);
+            }
+            
+            if (!empty($authorizationToken)) {
+                $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($authorizationToken);
 
-            try {
-                
-                $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($authorization_key);
-
-                return ['email' => $user['email'], 'auth_token' => $authorization_key];
-
-            } catch (\Exception $e) { dump($e->getMessage()); die; }
+                return [
+                    'email' => $user['email'], 
+                    'authorizationToken' => $authorizationToken, 
+                ];
+            }
         }
         
-        return $credentials;
+        return [];
     }
 
     /**
@@ -73,6 +73,10 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getUser($credentials, UserProviderInterface $provider)
     {
+        if (empty($credentials['email'])) {
+            return null;
+        }
+
         return $provider->loadUserByUsername($credentials['email']);
     }
 
@@ -81,10 +85,10 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function checkCredentials($credentials, UserInterface $user)
     {
-        if (!empty($credentials['auth_token'])) {
+        if (!empty($credentials['authorizationToken'])) {
             $accessCredentials = $this->entityManager->getRepository(ApiAccessCredential::class)->findOneBy([
                 'user' => $user,
-                'token' => $credentials['auth_token'],
+                'token' => $credentials['authorizationToken'],
             ]);
 
             if (!empty($accessCredentials) && true == $accessCredentials->getIsEnabled() && false == $accessCredentials->getIsExpired()) {
@@ -110,31 +114,36 @@ class APIGuard extends AbstractGuardAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception)
     {
-        switch ($exception->getMessageKey()) {
-            case 'Username could not be found.':
-                $data = [
+        $responseContent = [
+            'status' => false,
+            'message' => strtr($exception->getMessageKey(), $exception->getMessageData()),
+            'error_code' => self::API_UNEXPECTED_ERROR,
+        ];
+
+        switch (strtolower($exception->getMessageKey())) {
+            case 'username could not be found.':
+                $responseContent = [
                     'status' => false,
                     'message' => 'No such user found',
-                    'error_code' => self::USER_NOT_FOUND,
+                    'error_code' => self::API_UNAUTHORIZED,
                 ];
+
                 break;
-            case 'Invalid Credentials.':
-                $data = [
+            case 'invalid credentials.':
+                $responseContent = [
                     'status' => false,
                     'message' => 'Invalid credentials provided.',
-                    'error_code' => self::INVALID_CREDNETIALS,
+                    'error_code' => self::API_NOT_AUTHENTICATED,
                 ];
+
                 break;
             default:
-                $data = [
-                    'status' => false,
-                    'message' => strtr($exception->getMessageKey(), $exception->getMessageData()),
-                    'error_code' => self::UNEXPECTED_ERROR,
-                ];
+                
+
                 break;
         }
 
-        return new JsonResponse($data, Response::HTTP_FORBIDDEN);
+        return new JsonResponse($responseContent, Response::HTTP_FORBIDDEN);
     }
 
     public function start(Request $request, AuthenticationException $authException = null)
