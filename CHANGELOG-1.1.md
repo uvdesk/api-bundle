@@ -3,6 +3,9 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
+* 1.1.1.1 (2023-02-14)
+    * Feature: Add support for api authentication using both Basic/Bearer header token values
+
 * 1.1.1 (2022-09-13)
     * Bug Fixes: Entity reference updates and other miscellaneous bug fixes
 
