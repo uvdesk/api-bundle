@@ -45,6 +45,10 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function supports(Request $request)
     {
+        if (in_array($request->attributes->get('_route'), ['uvdesk_api_bundle_api_sessions_v1.0_validate_session'])) {
+            return false;
+        }
+        
         return 'OPTIONS' != $request->getRealMethod() && 'uvdesk_api' === $this->firewall->getFirewallConfig($request)->getName();
     }
 
