@@ -35,7 +35,7 @@ Use the below available apis to interact with your helpdesk system.
 ## Session:
 
 
-- **POST** <span style="text-decoration: underline">**/api/v1/session/login**</span>
+- POST **/api/v1/session/login**
 
     Authenticate user credentials and generate an access token in response to access helpdesk apis as the authenticated user.
 
@@ -58,7 +58,7 @@ Use the below available apis to interact with your helpdesk system.
     }
     ```
 
-- **POST** <span style="text-decoration: underline">**/api/v1/session/logout**</span>
+- POST **/api/v1/session/logout**
 
     Invalidates an authenticated user access token so that it can't be used anymore.
 
@@ -85,7 +85,7 @@ Use the below available apis to interact with your helpdesk system.
 
 More examples of ticket related apis can be found over [here][6].
 
-- **GET** <span style="text-decoration: underline">**/tickets**</span>
+- GET **/tickets**
 
     Get a collection of all user accessible tickets.
 
