@@ -1,0 +1,10 @@
+uvdesk_api_bundle_api_sessions_v1.0_validate_session:
+    path:       /sessions/validate
+    controller: Webkul\UVDesk\ApiBundle\API\Access::validateSession
+    methods:    [POST]  
+
+
+uvdesk_api_bundle_api_sessions_v1.0_fetch_data:
+    path:       /sessions/invalidate
+    controller: Webkul\UVDesk\ApiBundle\API\Access::invalidateSesssion
+    methods:    [POST]  
