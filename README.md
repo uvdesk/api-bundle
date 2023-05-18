@@ -41,7 +41,7 @@ Use the below available apis to interact with your helpdesk system.
     
     ```
     {
-        "Authorization": "Basic AUTH_TOKEN"
+        "Authorization": "Bearer AUTH_TOKEN"
     }
     ```
 
@@ -64,7 +64,7 @@ Use the below available apis to interact with your helpdesk system.
     
     ```
     {
-        "Authorization": "Basic ACCESS_TOKEN"
+        "Authorization": "Bearer ACCESS_TOKEN"
     }
     ```
 
@@ -91,7 +91,7 @@ More examples of ticket related apis can be found over [here][6].
     
     ```
     {
-        "Authorization": "Basic ACCESS_TOKEN"
+        "Authorization": "Bearer ACCESS_TOKEN"
     }
     ```
 
