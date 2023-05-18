@@ -13,5 +13,5 @@ uvdesk_api_bundle_api_ticket_routing_resources_v1.0:
 uvdesk_api_bundle_api_ticket_thread_routing_resources_v1.0:
     resource: "threads.yaml"
     
-uvdesk_api_bundle_api_access_routing_resources_v1.0:
-    resource: "access.yaml"
+uvdesk_api_bundle_session_api_routing_resources_v1.0:
+    resource: "sessions.yaml"

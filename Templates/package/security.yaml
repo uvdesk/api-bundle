@@ -1,0 +1,14 @@
+security:
+    providers:
+        uv_api_credentials:
+            id: Webkul\UVDesk\ApiBundle\Providers\ApiCredentials
+    
+    firewalls:
+        uvdesk_api:
+            pattern: ^/api
+            anonymous: true
+            provider: uv_api_credentials
+            
+            guard:
+                authenticators:
+                    Webkul\UVDesk\ApiBundle\Security\Guards\APIGuard: Webkul\UVDesk\ApiBundle\Security\Guards\APIGuard
