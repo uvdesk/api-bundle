@@ -46,16 +46,23 @@ class Sessions extends AbstractController
     public function logoutSession(Request $request, EntityManagerInterface $entityManager)
     {
         $user = $this->getUser();
+
+        $accessToken = null;
         $authorization = $request->headers->get('Authorization');
+
+        if (!empty($authorization) && strpos(strtolower($authorization), 'basic') === 0) {
+            $accessToken = substr($authorization, 6);
+        } else if (!empty($authorization) && strpos(strtolower($authorization), 'bearer') === 0) {
+            $accessToken = substr($authorization, 7);
+        }
         
-        if (empty($authorization) || strpos(strtolower($authorization), 'basic') !== 0) {
+        if (empty($accessToken)) {
             return new JsonResponse([
                 'success' => false, 
                 'message' => "Unsupported or invalid credentials provided.", 
             ]);
         }
 
-        $accessToken = substr($authorization, 6);
         $apiAccessCredential = $entityManager->getRepository(ApiAccessCredential::class)->findOneByToken($accessToken);
 
         if (empty($apiAccessCredential)) {

@@ -55,11 +55,16 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getCredentials(Request $request)
     {
+        $accessToken = null;
         $authorization = $request->headers->get('Authorization');
 
         if (!empty($authorization) && strpos(strtolower($authorization), 'basic') === 0) {
             $accessToken = substr($authorization, 6);
+        } else if (!empty($authorization) && strpos(strtolower($authorization), 'bearer') === 0) {
+            $accessToken = substr($authorization, 7);
+        }
 
+        if (!empty($accessToken)) {
             try {
                 if (in_array($request->attributes->get('_route'), ['uvdesk_api_bundle_sessions_api_v1.0_login_session'])) {
                     list($email, $password) = explode(':', base64_decode($accessToken));
