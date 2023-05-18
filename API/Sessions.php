@@ -3,15 +3,15 @@
 namespace Webkul\UVDesk\ApiBundle\API;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
 
-class SessionManagement extends AbstractController
+class Sessions extends AbstractController
 {
     public function loginSession(Request $request, EntityManagerInterface $entityManager)
     {

@@ -70,7 +70,7 @@ class APIGuard extends AbstractGuardAuthenticator
                     ];
                 } else {
                     $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($accessToken);
-    
+                    
                     return [
                         'email' => $user['email'], 
                         'accessToken' => $accessToken, 
