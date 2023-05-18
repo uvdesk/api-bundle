@@ -25,8 +25,6 @@ Finally clear your project cache by below command(write prod if running in produ
 $ php bin/console cache:clear --env dev
 ```
 
---------------
-
 API References
 --------------
 
