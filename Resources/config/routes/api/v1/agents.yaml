@@ -1,0 +1,9 @@
+uvdesk_api_bundle_v1.0.0_agents_api_load_agents:
+    path: /agents
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::loadAgents
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_agents_api_load_agent_details:
+    path: /agents/{id}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::loadAgentDetails
+    methods: [GET]

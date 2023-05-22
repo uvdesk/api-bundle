@@ -1,4 +1,3 @@
-# Enter ticket thread api endpoints here ...
 uvdesk_api_bundle_api_tickets_v1.0_add_thread:
     path:     /ticket/{ticketid}/thread
     controller: Webkul\UVDesk\ApiBundle\API\Threads::saveThread
