@@ -1,0 +1,4 @@
+uvdesk_api_bundle_v1.0.0_me_api_load_current_agent_details:
+    path: /me
+    controller: Webkul\UVDesk\ApiBundle\API\Me::loadCurrentAgentDetails
+    methods: [GET]
