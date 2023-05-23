@@ -1,3 +1,6 @@
+uvdesk_api_bundle_v1_me_api_routing_resources:
+    resource: "v1/me.yaml"
+
 uvdesk_api_bundle_v1_agent_api_routing_resources:
     resource: "v1/agents.yaml"
 
