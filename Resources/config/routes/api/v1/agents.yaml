@@ -7,3 +7,8 @@ uvdesk_api_bundle_v1.0.0_agents_api_load_agent_details:
     path: /agents/{id}
     controller: Webkul\UVDesk\ApiBundle\API\Agents::loadAgentDetails
     methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_agents_api_create_agent:
+    path: /agents/create
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::createAgentRecord
+    methods: [POST]
