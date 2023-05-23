@@ -2,9 +2,9 @@
 
 namespace Webkul\UVDesk\ApiBundle\API;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,63 +13,60 @@ use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 
 class Customers extends AbstractController
 {
-    public function loadCustomers(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager)
+    public function loadCustomers(Request $request, EntityManagerInterface $entityManager)
     {
-        $collection = [];
-
         $qb = $entityManager->createQueryBuilder();
-        
-        $qb->select(" u.id,u.email,u.firstName,u.lastName,u.isEnabled,userInstance.isActive, userInstance.isVerified, userInstance.designation, userInstance.contactNumber")
+        $qb
+            ->select("
+                u.id, 
+                u.email, 
+                u.firstName, 
+                u.lastName, 
+                u.isEnabled, 
+                userInstance.isActive, 
+                userInstance.isVerified, 
+                userInstance.designation, 
+                userInstance.contactNumber
+            ")
             ->from(User::class, 'u')
             ->leftJoin('u.userInstance', 'userInstance')
-            ->andwhere('userInstance.supportRole = :roles')
+            ->where('userInstance.supportRole = :roles')
             ->setParameter('roles', 4)
         ;
 
-        $result = $qb->getQuery()->getResult();
-        if ($result) {
-            return new JsonResponse([
-                'success' => true, 
-                'collection' =>  $result, 
-            ]);
-        } else {
-            return new JsonResponse([
-                'success' => false, 
-                'message' => 'Collection not found.', 
-            ]);
-        }
+        $collection = $qb->getQuery()->getResult();
+
+        return new JsonResponse([
+            'success' => true, 
+            'collection' => $collection, 
+        ]);
     }
 
-    public function loadCustomerDetails($id, Request $request, ContainerInterface $container)
+    public function loadCustomerDetails($id, Request $request)
     {
         $user = $this->getDoctrine()->getRepository(User::class)->findOneById($id);
 
-        if ($user->getIsEnabled() == 'true') {
-    
-            $customerDetail = [
-                'id' => $user->getId(), 
-                'firstName' => $user->getFirstName(),
-                'lastName' => $user->getLastName(),
-                'userEmail' => $user->getUsername(),
-                'isEnabled' => $user->getIsEnabled(),
-                'isActive' => $user->getCustomerInstance()->getIsActive(),
-                'isVerified' => $user->getCustomerInstance()->getIsVerified(),
-                'contactNumber' => $user->getCustomerInstance()->getContactNumber()
-            ];
-
-            return new JsonResponse([
-                'success' => true, 
-                'customer' => $customerDetail
-            ]);
-
-        } else {
+        if (empty($user)) {
             return new JsonResponse([
                 'success' => false, 
-                'message' => 'Agent account is disabled.', 
-            ]);
+                'message' => "No customer account details were found with id '$id'.", 
+            ], 404);
         }
+
+        $customerDetails = [
+            'id' => $user->getId(), 
+            'firstName' => $user->getFirstName(),
+            'lastName' => $user->getLastName(),
+            'userEmail' => $user->getUsername(),
+            'isEnabled' => $user->getIsEnabled(),
+            'isActive' => $user->getCustomerInstance()->getIsActive(),
+            'isVerified' => $user->getCustomerInstance()->getIsVerified(),
+            'contactNumber' => $user->getCustomerInstance()->getContactNumber()
+        ];
+
+        return new JsonResponse([
+            'success' => true, 
+            'customer' => $customerDetails
+        ]);
     }
-
-
-
 }
