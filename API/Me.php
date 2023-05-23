@@ -9,13 +9,16 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService;
 
 class Me extends AbstractController
 {
-    public function loadCurrentAgentDetails(Request $request, ContainerInterface $container)
+    public function loadCurrentAgentDetails(Request $request, UVDeskService $uvdesk)
     {
         $user = $this->getUser();
         $userInstance = $user->getCurrentInstance();
+
+        $thumbnail = $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? $this->getParameter('assets_default_agent_profile_image_path'));
 
         return new JsonResponse([
             'success' => true, 
@@ -26,7 +29,7 @@ class Me extends AbstractController
                 'firstName' => $user->getFirstName(), 
                 'lastName' => $user->getLastName(), 
                 'isEnabled' => $user->getIsEnabled(), 
-                'profileImage' => $userInstance->getProfileImagePath(), 
+                'thumbnail' => $thumbnail, 
             ], 
         ]);
     }

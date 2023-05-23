@@ -24,6 +24,7 @@ use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketType;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
+use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService;
 
 class Tickets extends AbstractController
 {
@@ -32,10 +33,11 @@ class Tickets extends AbstractController
      *
      * @param Request $request
      */
-    public function fetchTickets(Request $request, ContainerInterface $container)
+    public function fetchTickets(Request $request, ContainerInterface $container, UVDeskService $uvdesk)
     {
         $json = [];
         $entityManager = $this->getDoctrine()->getManager();
+        
         $ticketRepository = $this->getDoctrine()->getRepository(Ticket::class);
         $userRepository = $this->getDoctrine()->getRepository(User::class);
 
@@ -51,8 +53,8 @@ class Tickets extends AbstractController
                         $json['error'] = $container->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
                     }
+
                     return new JsonResponse($json);
-                    break;
                 case 'agent':
                     $email = $request->query->get('actAsEmail');
                     $user = $entityManager->getRepository(User::class)->findOneByEmail($email);
@@ -63,27 +65,69 @@ class Tickets extends AbstractController
                         $json['error'] = $container->get('translator')->trans('Error! Resource not found.');
                         return new JsonResponse($json, Response::HTTP_NOT_FOUND);
                     }
+
                     break;
                 default:
                     $json['error'] = $container->get('translator')->trans('Error! invalid actAs details.');
+
                     return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
             }
         }
 
         $json = $ticketRepository->getAllTickets($request->query, $container);
 
-        $json['userDetails'] = [
-            'user' => $this->getUser()->getId(),
-            'name' => $this->getUser()->getFirstName().' '.$this->getUser()->getLastname(),
+        $collection = $json['tickets'];
+        $pagination = $json['pagination'];
+
+        // Resolve asset paths
+        $defaultAgentProfileImagePath = $this->getParameter('assets_default_agent_profile_image_path');
+        $defaultCustomerProfileImagePath = $this->getParameter('assets_default_customer_profile_image_path');
+
+        $user = $this->getUser();
+        $userInstance = $user->getCurrentInstance();
+
+        $currentUserDetails = [
+            'id' => $user->getId(), 
+            'email' => $user->getEmail(), 
+            'name' => $user->getFirstName() . ' ' . $user->getLastname(), 
+            'profileImagePath' => $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? $defaultAgentProfileImagePath)
         ];
 
-        $json['agents'] = $container->get('user.service')->getAgentsPartialDetails();
-        $json['status'] = $container->get('ticket.service')->getStatus();
-        $json['group'] = $userRepository->getSupportGroups(); 
-        $json['team'] =  $userRepository->getSupportTeams();
-        $json['priority'] = $container->get('ticket.service')->getPriorities();
-        $json['type'] = $container->get('ticket.service')->getTypes();
-        $json['source'] = $container->get('ticket.service')->getAllSources();
+        foreach ($collection as $index => $ticket) {
+            // Resolve assets: Assigned agent
+            if (!empty($ticket['agent'])) {
+                $profileImagePath = $uvdesk->generateCompleteLocalResourcePathUri($ticket['agent']['profileImagePath'] ?? $defaultAgentProfileImagePath);
+                $smallThumbnailPath = $uvdesk->generateCompleteLocalResourcePathUri($ticket['agent']['smallThumbnail'] ?? $defaultAgentProfileImagePath);
+
+                $collection[$index]['agent']['profileImagePath'] = $profileImagePath;
+                $collection[$index]['agent']['smallThumbnail'] = $smallThumbnailPath;
+            }
+
+            // Resolve assets: Customer
+            if (!empty($ticket['customer'])) {
+                $profileImagePath = $uvdesk->generateCompleteLocalResourcePathUri($ticket['customer']['profileImagePath'] ?? $defaultCustomerProfileImagePath);
+                $smallThumbnailPath = $uvdesk->generateCompleteLocalResourcePathUri($ticket['customer']['smallThumbnail'] ?? $defaultCustomerProfileImagePath);
+
+                $collection[$index]['customer']['profileImagePath'] = $profileImagePath;
+                $collection[$index]['customer']['smallThumbnail'] = $smallThumbnailPath;
+            }
+        }
+
+        // Available helpdesk agents collection
+        $agents = $container->get('user.service')->getAgentsPartialDetails();
+
+        return new JsonResponse([
+            'tickets' => $collection, 
+            'pagination' => $pagination, 
+            'userDetails' => $currentUserDetails, 
+            'agents' => $agents, 
+            'status' => $container->get('ticket.service')->getStatus(), 
+            'group' => $userRepository->getSupportGroups(), 
+            'team' =>  $userRepository->getSupportTeams(), 
+            'priority' => $container->get('ticket.service')->getPriorities(), 
+            'type' => $container->get('ticket.service')->getTypes(), 
+            'source' => $container->get('ticket.service')->getAllSources(), 
+        ]);
 
         return new JsonResponse($json);
     }
@@ -283,9 +327,10 @@ class Tickets extends AbstractController
      * @param Request $request
      * @return void
      */
-    public function viewTicket($ticketId, Request $request, ContainerInterface $container)
+    public function viewTicket($ticketId, Request $request, ContainerInterface $container, UVDeskService $uvdesk)
     {
         $entityManager = $this->getDoctrine()->getManager();
+
         $userRepository = $entityManager->getRepository(User::class);
         $ticketRepository = $entityManager->getRepository(Ticket::class);
 
@@ -295,12 +340,31 @@ class Tickets extends AbstractController
             throw new \Exception('Page not found');
         }
 
+        $user = $this->getUser();
+        $userInstance = $user->getCurrentInstance();
+
         $agent = $ticket->getAgent();
         $customer = $ticket->getCustomer();
 
+        $defaultAgentProfileImagePath = $this->getParameter('assets_default_agent_profile_image_path');
+        $defaultCustomerProfileImagePath = $this->getParameter('assets_default_customer_profile_image_path');
+
+        $agentDetails = !empty($agent) ? $agent->getAgentInstance()->getPartialDetails() : null;
+        $customerDetails = $customer->getCustomerInstance()->getPartialDetails();
+
+        if (!empty($agentDetails)) {
+            $agentDetails['thumbnail'] = $uvdesk->generateCompleteLocalResourcePathUri($agentDetails['thumbnail'] ?? $defaultAgentProfileImagePath);
+        }
+
+        if (!empty($agentDetails)) {
+            $customerDetails['thumbnail'] = $uvdesk->generateCompleteLocalResourcePathUri($customerDetails['thumbnail'] ?? $defaultCustomerProfileImagePath);
+        }
+
         // Mark as viewed by agents
         if (false == $ticket->getIsAgentViewed()) {
-            $ticket->setIsAgentViewed(true);
+            $ticket
+                ->setIsAgentViewed(true)
+            ;
 
             $entityManager->persist($ticket);
             $entityManager->flush();
@@ -336,19 +400,63 @@ class Tickets extends AbstractController
             ];
         }, $entityManager->getRepository(TicketPriority::class)->findAll());
       
-        $ticketObj = $ticket;
-        $ticket = json_decode($this->objectSerializer($ticketObj), true);
-      
+        $userService = $container->get('user.service');
+
+        $ticketDetails = [
+            'id' => $ticket->getId(), 
+            'source' => $ticket->getSource(), 
+            'subject' => $ticket->getSubject(), 
+            'isNew' => $ticket->getIsNew(), 
+            'isReplied' => $ticket->getIsReplied(), 
+            'isReplyEnabled' => $ticket->getIsReplyEnabled(), 
+            'isStarred' => $ticket->getIsStarred(), 
+            'isTrashed' => $ticket->getIsTrashed(), 
+            'isAgentViewed' => $ticket->getIsAgentViewed(), 
+            'isCustomerViewed' => $ticket->getIsCustomerViewed(), 
+            'createdAt' => $userService->getLocalizedFormattedTime($ticket->getCreatedAt(), $user), 
+            'updatedAt' => $userService->getLocalizedFormattedTime($ticket->getUpdatedAt(), $user), 
+        ];
+
+        $threads = array_map(function ($thread) use ($uvdesk, $userService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
+            $user = $thread->getUser();
+            $userInstance = $thread->getCreatedBy() == 'agent' ? $user->getAgentInstance() : $user->getCustomerInstance();
+
+            $thumbnail = $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? ($thread->getCreatedBy() == 'agent' ? $defaultAgentProfileImagePath : $defaultCustomerProfileImagePath));
+
+            return [
+                'id' => $thread->getId(), 
+                'source' => $thread->getSource(), 
+                'threadType' => $thread->getThreadType(), 
+                'createdBy' => $thread->getCreatedBy(), 
+                'cc' => $thread->getCc(), 
+                'bcc' => $thread->getBcc(), 
+                'isLocked' => $thread->getIsLocked(), 
+                'isBookmarked' => $thread->getIsBookmarked(), 
+                'message' => $thread->getMessage(), 
+                'source' => $thread->getSource(), 
+                'createdAt' => $userService->getLocalizedFormattedTime($thread->getCreatedAt(), $user), 
+                'updatedAt' => $userService->getLocalizedFormattedTime($thread->getUpdatedAt(), $user), 
+                'user' => [
+                    'id' => $user->getId(), 
+                    'name' => $user->getFullName(), 
+                    'email' => $user->getEmail(), 
+                    'thumbnail' => $thumbnail, 
+                ], 
+            ];
+        }, $ticket->getThreads()->getValues());
+
+        $ticketDetails['threads'] = $threads;
+        $ticketDetails['agent'] = $agentDetails;
+        $ticketDetails['customer'] = $customerDetails;
+        
         return new JsonResponse([
-            'ticket' => $ticket,
+            'ticket' => $ticketDetails,
             'totalCustomerTickets' => ($ticketRepository->countCustomerTotalTickets($customer, $container)),
-            'ticketAgent' => !empty($agent) ? $agent->getAgentInstance()->getPartialDetails() : null,
-            'customer' => $customer->getCustomerInstance()->getPartialDetails(),
-            'supportGroupCollection' => $userRepository->getSupportGroups(),
-            'supportTeamCollection' => $userRepository->getSupportTeams(),
-            'ticketStatusCollection' => $status,
-            'ticketPriorityCollection' => $priority,
-            'ticketTypeCollection' => $type
+            'supportGroups' => $userRepository->getSupportGroups(),
+            'supportTeams' => $userRepository->getSupportTeams(),
+            'ticketStatuses' => $status,
+            'ticketPriorities' => $priority,
+            'ticketTypes' => $type
         ]);
     }
 
