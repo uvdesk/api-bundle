@@ -369,4 +369,58 @@ class Agents extends AbstractController
         }
 
     }
+
+    public function deleteAgentRecord(Request $request, $agentId, EventDispatcherInterface $eventDispatcher, UserService $userService)
+    {
+        $entityManager = $this->getDoctrine()->getManager();
+        if ($agentId) {
+                
+            $user = $entityManager->createQueryBuilder()
+                ->select('u')
+                ->from(User::class, 'u')
+                ->leftJoin('u.userInstance', 'userInstance')
+                ->where('u.id = :userId')->setParameter('userId', $agentId)
+                ->andWhere('userInstance.supportRole != :roles')->setParameter('roles', 4)
+                ->getQuery()
+                ->getOneOrNullResult()
+            ;
+           
+            if (empty($user)) {
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Agent information not found.', 
+                ],404);
+            }
+         
+            if ($user->getAgentInstance()->getSupportRole()->getCode() != "ROLE_SUPER_ADMIN") {
+                // Trigger agent delete event
+                $event = new CoreWorkflowEvents\Agent\Delete();
+                $event
+                ->setUser($user)
+                ;
+                
+                $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+                
+                // Removing profile image from physical path
+                $fileService = new Fileservice;
+                
+                if ($user->getAgentInstance()->getProfileImagePath()) {
+                    $fileService->remove($this->getParameter('kernel.project_dir'). '/public' . $user->getAgentInstance()->getProfileImagePath());
+                }
+                
+                $userService->removeAgent($user);
+
+                return new JsonResponse([
+                    'success' => true, 
+                    'message' => 'Agent removed successfully.', 
+                ]);
+
+            } else {
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Authorization failed.', 
+                ],404);
+            }
+        }
+    }
 }

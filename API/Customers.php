@@ -244,4 +244,40 @@ class Customers extends AbstractController
             'message' => "Invalid credentials provided."
         ],404);
     }
+
+    public function deleteCustomerRecored(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $user = $em->getRepository(User::class)->findOneBy(['id' => $customerId]);
+        
+        if (empty($user)) {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => "Customer not found with this id '$customerId'."
+            ],404);
+        }
+        
+        $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4));
+
+        if (empty($userInstance)) {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => "Authorization failed."
+            ],404);
+        }
+
+        $userService->removeCustomer($user);
+        // Trigger customer created event
+        $event = new CoreWorkflowEvents\Customer\Delete();
+        $event
+            ->setUser($user)
+        ;
+
+        $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+
+        return new JsonResponse([
+            'success' => true, 
+            'message' => "Customer removed successfully."
+        ]);
+    }
 }
