@@ -401,6 +401,7 @@ class Tickets extends AbstractController
         }, $entityManager->getRepository(TicketPriority::class)->findAll());
       
         $userService = $container->get('user.service');
+        $fileSystemService =  $container->get('uvdesk.core.file_system.service');
 
         $ticketDetails = [
             'id' => $ticket->getId(), 
@@ -417,9 +418,36 @@ class Tickets extends AbstractController
             'updatedAt' => $userService->getLocalizedFormattedTime($ticket->getUpdatedAt(), $user), 
         ];
 
-        $threads = array_map(function ($thread) use ($uvdesk, $userService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
+        $threads = array_map(function ($thread) use ($uvdesk, $userService, $defaultAgentProfileImagePath, $fileSystemService, $defaultCustomerProfileImagePath) {
             $user = $thread->getUser();
             $userInstance = $thread->getCreatedBy() == 'agent' ? $user->getAgentInstance() : $user->getCustomerInstance();
+            $attachment = $thread->getAttachments();
+            $author = $thread->getUser();
+            $authorInstance = 'agent' == $thread->getCreatedBy() ? $author->getAgentInstance() : $author->getCustomerInstance();
+            
+            if (!empty($attachment)) {
+                $threadDetails = [
+                    'id' => $thread->getId(),
+                    'source' => $thread->getSource(),
+                    'messageId' => $thread->getMessageId(),
+                    'threadType' => $thread->getThreadType(),
+                    'createdBy' => $thread->getCreatedBy(),
+                    'message' => html_entity_decode($thread->getMessage()),
+                    'attachments' => $thread->getAttachments(),
+                    'timestamp' => $thread->getCreatedAt()->getTimestamp(),
+                    'createdAt' => $thread->getCreatedAt()->format('d-m-Y h:ia'),
+                    'user' => $authorInstance->getPartialDetails(),
+                    'cc' => is_array($thread->getCc()) ? implode(', ', $thread->getCc()) : '',
+                ];
+            }
+            
+            $threadAttachment = $threadDetails['attachments']->getValues();
+            
+            if (!empty($threadAttachment)) {
+                $threadDetails['attachments'] = array_map(function ($attachment) use ($fileSystemService) {
+                    return $fileSystemService->getFileTypeAssociations($attachment);
+                }, $threadAttachment);
+            }
 
             $thumbnail = $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? ($thread->getCreatedBy() == 'agent' ? $defaultAgentProfileImagePath : $defaultCustomerProfileImagePath));
 
@@ -442,6 +470,7 @@ class Tickets extends AbstractController
                     'email' => $user->getEmail(), 
                     'thumbnail' => $thumbnail, 
                 ], 
+                'attachmentCollection' =>$threadDetails,
             ];
         }, $ticket->getThreads()->getValues());
 
