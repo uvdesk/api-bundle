@@ -91,35 +91,32 @@ class Customers extends AbstractController
             }
         }
 
-        if (empty($customerInstance)) {
-            
-            $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
-            $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
-            
-            $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
-                'contact' => $params['contactNumber'],
-                'source' => 'website',
-                'active' => !empty($params['isActive']) ? true : false,
-                'image' => $uploadedFiles,
-            ]);
-
-            if(!empty($user)){
-                $user->setIsEnabled(true);
-                $entityManager->persist($user);
-                $entityManager->flush();
-            }
-
-            return new JsonResponse([
-                'success' => true, 
-                'message' => 'Customer saved successfully.', 
-            ]);
-
-        
-        } else {
+        if (!empty($customerInstance)) {
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'User with same email already exist.', 
             ],404);
         }
+
+        $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
+        $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
+        
+        $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
+            'contact' => $params['contactNumber'],
+            'source' => 'website',
+            'active' => !empty($params['isActive']) ? true : false,
+            'image' => $uploadedFiles,
+        ]);
+
+        if(!empty($user)){
+            $user->setIsEnabled(true);
+            $entityManager->persist($user);
+            $entityManager->flush();
+        }
+
+        return new JsonResponse([
+            'success' => true, 
+            'message' => 'Customer saved successfully.', 
+        ]);
     }
 }
