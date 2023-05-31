@@ -18,7 +18,6 @@ use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem as Fileservice;
 
-
 class Customers extends AbstractController
 {
     public function loadCustomers(Request $request, EntityManagerInterface $entityManager)
