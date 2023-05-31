@@ -406,6 +406,8 @@ class Tickets extends AbstractController
         $ticketDetails = [
             'id' => $ticket->getId(), 
             'source' => $ticket->getSource(), 
+            'priority' => $ticket->getPriority()->getId(), 
+            'status' => $ticket->getStatus()->getId(), 
             'subject' => $ticket->getSubject(), 
             'isNew' => $ticket->getIsNew(), 
             'isReplied' => $ticket->getIsReplied(), 
@@ -418,18 +420,13 @@ class Tickets extends AbstractController
             'updatedAt' => $userService->getLocalizedFormattedTime($ticket->getUpdatedAt(), $user), 
         ];
 
-        $threads = array_map(function ($thread) use ($uvdesk, $userService, $defaultAgentProfileImagePath, $fileSystemService, $defaultCustomerProfileImagePath) {
+        $threads = array_map(function ($thread) use ($uvdesk, $userService, $fileSystemService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
             $user = $thread->getUser();
             $userInstance = $thread->getCreatedBy() == 'agent' ? $user->getAgentInstance() : $user->getCustomerInstance();
-            
-            $resolvedThreadAttachments = [];
-            $threadAttachments = $thread->getAttachments()->getValues();
-            
-            if (!empty($threadAttachments)) {
-                $resolvedThreadAttachments = array_map(function ($attachment) use ($fileSystemService) {
-                    return $fileSystemService->getFileTypeAssociations($attachment);
-                }, $threadAttachments);
-            }
+
+            $attachments = array_map(function ($attachment) use ($fileSystemService) {
+                return $fileSystemService->getFileTypeAssociations($attachment);
+            }, $thread->getAttachments()->getValues());
 
             $thumbnail = $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? ($thread->getCreatedBy() == 'agent' ? $defaultAgentProfileImagePath : $defaultCustomerProfileImagePath));
 
@@ -452,13 +449,14 @@ class Tickets extends AbstractController
                     'email' => $user->getEmail(), 
                     'thumbnail' => $thumbnail, 
                 ], 
-                'attachmentCollection' => $resolvedThreadAttachments,
+                'attachments' => $attachments,
             ];
         }, $ticket->getThreads()->getValues());
 
         $ticketDetails['threads'] = $threads;
         $ticketDetails['agent'] = $agentDetails;
         $ticketDetails['customer'] = $customerDetails;
+        $ticketDetails['totalThreads'] = count($threads);
         
         return new JsonResponse([
             'ticket' => $ticketDetails,
