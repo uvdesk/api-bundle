@@ -12,3 +12,8 @@ uvdesk_api_bundle_v1.0.0_agents_api_create_agent:
     path: /agents/create
     controller: Webkul\UVDesk\ApiBundle\API\Agents::createAgentRecord
     methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_agents_api_update_agent:
+    path: /agents/update/{id}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::updateAgentRecord
+    methods: [POST]

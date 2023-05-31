@@ -11,7 +11,13 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportRole;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 use Webkul\UVDesk\CoreFrameworkBundle\Services\UserService;
+use Webkul\UVDesk\CoreFrameworkBundle\FileSystem\FileSystem;
+use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Filesystem\Filesystem as Fileservice;
+
 
 class Customers extends AbstractController
 {
@@ -87,7 +93,7 @@ class Customers extends AbstractController
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Profile image is not valid, please upload a valid format', 
-                ]);
+                ],404);
             }
         }
 
@@ -118,5 +124,121 @@ class Customers extends AbstractController
             'success' => true, 
             'message' => 'Customer saved successfully.', 
         ]);
+    }
+
+
+    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
+    {
+        $params = $request->request->all();
+        $dataFiles = $request->files->get('user_form');
+        $em = $this->getDoctrine()->getManager();
+        $repository = $em->getRepository(User::class);
+        
+        if ($id) {
+            $user = $repository->findOneBy(['id' =>  $id]);
+            if (!$user) {
+                $id = $id;
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => "User not found with this id '$id' ."
+                ],404);
+            }    
+        }
+        
+        // Customer Profile upload validation
+        $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
+        if(isset($dataFiles)){
+            if(!in_array($dataFiles->getMimeType(), $validMimeType)){
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Profile image is not valid, please upload a valid format', 
+                ],404);
+            }
+        }
+        
+        if ($id) {
+            $checkUser = $em->getRepository(User::class)->findOneBy(array('email' => $params['email']));
+            $errorFlag = 0;
+            
+            if($checkUser) {
+                if($checkUser->getId() != $id)
+                $errorFlag = 1;
+            }
+            
+            if (!$errorFlag && 'hello@uvdesk.com' !== $user->getEmail()) {
+
+                if (
+                    isset($params['password']['first']) && !empty(trim($params['password']['first'])) 
+                    && isset($params['password']['second'])  && !empty(trim($params['password']['second']))) {
+                        if(trim($params['password']['first']) == trim($params['password']['second'])){
+                            $encodedPassword = $passwordEncoder->encodePassword($user, $params['password']['first']);
+                            $user->setPassword($encodedPassword);
+                        } else {
+                            return new JsonResponse([
+                                'success' => false, 
+                                'message' => 'Both password does not match together.', 
+                            ],404);
+                        }
+                }
+                
+                $email = $user->getEmail();
+                $user->setFirstName($params['firstName']);
+                $user->setLastName($params['lastName']);
+                $user->setEmail($email);
+                $user->setIsEnabled(true);
+                $em->persist($user);
+                
+                // User Instance
+                $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4));
+                $userInstance->setUser($user);
+                $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
+                $userInstance->setIsVerified(0);
+                
+                if(isset($params['contactNumber'])) {
+                    $userInstance->setContactNumber($params['contactNumber']);
+                }
+                
+                if(isset($dataFiles)) {
+                    // Removed profile image from database and path
+                    
+                    $fileService = new Fileservice;
+                    if ($userInstance->getProfileImagePath()) {
+                        $fileService->remove($this->getParameter('kernel.project_dir').'/public'.$userInstance->getProfileImagePath());
+                    }
+
+                    $assetDetails = $fileSystem->getUploadManager()->uploadFile($dataFiles, 'profile');
+                    $userInstance->setProfileImagePath($assetDetails['path']);
+                } else {
+                    $userInstance->setProfileImagePath(null);
+                }
+                
+                $em->persist($userInstance);
+                $em->flush();
+                
+
+                $user->addUserInstance($userInstance);
+                $em->persist($user);
+                $em->flush();
+
+                // Trigger customer created event
+                $event = new CoreWorkflowEvents\Customer\Update();
+                $event
+                    ->setUser($user)
+                ;
+                
+                $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+
+                return new JsonResponse([
+                    'success' => true, 
+                    'message' => 'Customer updated successfully.', 
+                ]);
+                
+            }
+        }
+
+        return new JsonResponse([
+            'success' => false, 
+            'message' => "Invalid credentials provided."
+        ],404);
     }
 }

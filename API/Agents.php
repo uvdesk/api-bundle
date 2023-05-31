@@ -10,11 +10,19 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportRole;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportTeam;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportGroup;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportPrivilege;
+use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Webkul\UVDesk\CoreFrameworkBundle\Services\UserService;
+use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService;
+use Webkul\UVDesk\CoreFrameworkBundle\FileSystem\FileSystem;
+use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Filesystem\Filesystem as Fileservice;
 
 class Agents extends AbstractController
 {
@@ -174,5 +182,189 @@ class Agents extends AbstractController
             'success' => true, 
             'message' => 'Agent added successfully.', 
         ]);
+    }
+
+    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
+    {
+        $params = $request->request->all();
+        $dataFiles = $request->files->get('user_form');
+        $em = $this->getDoctrine()->getManager();
+        $user = $em->getRepository(User::class)->find($id);
+        $instanceRole = $user->getAgentInstance()->getSupportRole()->getCode();
+        
+        if (empty($user)) {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => 'Agent not found.', 
+            ],404);
+        }
+
+        // Agent Profile upload validation
+        $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
+        if(isset($dataFiles)){
+            if(!in_array($dataFiles->getMimeType(), $validMimeType)){
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Profile image is not valid, please upload a valid format.', 
+                ],404);
+            }
+        }
+
+        $checkUser = $em->getRepository(User::class)->findOneBy(array('email'=> $params['email']));
+        $errorFlag = 0;
+        
+        if ($checkUser && $checkUser->getId() != $id) {
+            $errorFlag = 1;
+        }
+
+        if (!$errorFlag) {
+            if (
+                isset($params['password']['first']) && !empty(trim($params['password']['first'])) 
+                && isset($params['password']['second'])  && !empty(trim($params['password']['second']))) {
+                    if(trim($params['password']['first']) == trim($params['password']['second'])){
+                        $encodedPassword = $passwordEncoder->encodePassword($user, $params['password']['first']);
+                        $user->setPassword($encodedPassword);
+                    } else {
+                        return new JsonResponse([
+                            'success' => false, 
+                            'message' => 'Both password does not match together.', 
+                        ],404);
+                    }
+            } 
+
+            $user->setFirstName($params['firstName']);
+            $user->setLastName($params['lastName']);
+            $user->setEmail($params['email']);
+            $user->setIsEnabled(true);
+            
+            $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $id, 'supportRole' => array(1, 2, 3)));        
+            $oldSupportTeam = ($supportTeamList = $userInstance != null ? $userInstance->getSupportTeams() : null) ? $supportTeamList->toArray() : [];
+            $oldSupportGroup  = ($supportGroupList = $userInstance != null ? $userInstance->getSupportGroups() : null) ? $supportGroupList->toArray() : [];
+            $oldSupportedPrivilege = ($supportPrivilegeList = $userInstance != null ? $userInstance->getSupportPrivileges() : null)? $supportPrivilegeList->toArray() : [];
+            
+            if(isset($params['role'])) {
+                $role = $em->getRepository(SupportRole::class)->findOneBy(array('code' => $params['role']));
+                $userInstance->setSupportRole($role);
+            }
+
+            if (isset($params['ticketView'])) {
+                $userInstance->setTicketAccessLevel($params['ticketView']);
+            }
+
+            $userInstance->setDesignation($params['designation']);
+            $userInstance->setContactNumber($params['contactNumber']);
+            $userInstance->setSource('website');
+
+            if (isset($dataFiles)) {
+                // Removed profile image from database and path   
+                $fileService = new Fileservice;
+                if ($userInstance->getProfileImagePath()) {
+                    $fileService->remove($this->getParameter('kernel.project_dir').'/public'.$userInstance->getProfileImagePath());
+                }
+                $assetDetails = $fileSystem->getUploadManager()->uploadFile($dataFiles, 'profile');
+                $userInstance->setProfileImagePath($assetDetails['path']);
+            } else {
+                $userInstance->setProfileImagePath(null);
+            }
+
+
+            $userInstance->setSignature($params['signature']);
+            $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
+
+            //Team support to agent 
+            if(isset($params['userSubGroup'])){
+                foreach ($params['userSubGroup'] as $userSubGroup) {
+                    if($userSubGrp = $uvdeskService->getEntityManagerResult(
+                        SupportTeam::class,
+                        'findOneBy', [
+                            'id' => $userSubGroup
+                        ]
+                    )
+                    )
+                        if(!$oldSupportTeam || !in_array($userSubGrp, $oldSupportTeam)){
+                            $userInstance->addSupportTeam($userSubGrp);
+
+                        }elseif($oldSupportTeam && ($key = array_search($userSubGrp, $oldSupportTeam)) !== false)
+                            unset($oldSupportTeam[$key]);
+                }
+
+                foreach ($oldSupportTeam as $removeteam) {
+                    $userInstance->removeSupportTeam($removeteam);
+                    $em->persist($userInstance);
+                }
+            }
+
+             //Group support  
+            if(isset($params['groups'])){
+                foreach ($params['groups'] as $userGroup) {
+                    if($userGrp = $uvdeskService->getEntityManagerResult(
+                        SupportGroup::class,
+                        'findOneBy', [
+                            'id' => $userGroup
+                        ]
+                    )
+                    )
+
+                        if(!$oldSupportGroup || !in_array($userGrp, $oldSupportGroup)){
+                            $userInstance->addSupportGroup($userGrp);
+
+                        }elseif($oldSupportGroup && ($key = array_search($userGrp, $oldSupportGroup)) !== false)
+                            unset($oldSupportGroup[$key]);
+                }
+
+                foreach ($oldSupportGroup as $removeGroup) {
+                    $userInstance->removeSupportGroup($removeGroup);
+                    $em->persist($userInstance);
+                }
+            }
+
+            //Privilegs support 
+            if(isset($params['agentPrivilege'])){
+                foreach ($params['agentPrivilege'] as $supportPrivilege) {
+                    if($supportPlg = $uvdeskService->getEntityManagerResult(
+                        SupportPrivilege::class,
+                        'findOneBy', [
+                            'id' => $supportPrivilege
+                        ]
+                    )
+                    )
+                        if(!$oldSupportedPrivilege || !in_array($supportPlg, $oldSupportedPrivilege)){
+                            $userInstance->addSupportPrivilege($supportPlg);
+
+                        }elseif($oldSupportedPrivilege && ($key = array_search($supportPlg, $oldSupportedPrivilege)) !== false)
+                            unset($oldSupportedPrivilege[$key]);
+                }
+                foreach ($oldSupportedPrivilege as $removeGroup) {
+                    $userInstance->removeSupportPrivilege($removeGroup);
+                    $em->persist($userInstance);
+                }
+            }
+
+            $userInstance->setUser($user);
+            $user->addUserInstance($userInstance);
+            $em->persist($user);
+            $em->persist($userInstance);
+            $em->flush();
+
+            // Trigger customer Update event
+            $event = new CoreWorkflowEvents\Agent\Update();
+            $event
+                ->setUser($user)
+            ;
+
+            $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+
+            return new JsonResponse([
+                'success' => true, 
+                'message' => 'Agent updated successfully.', 
+            ]);
+            
+        } else {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => 'User with same email is already exist.', 
+            ],404);
+        }
+
     }
 }
