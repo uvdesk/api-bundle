@@ -403,6 +403,24 @@ class Tickets extends AbstractController
         $userService = $container->get('user.service');
         $fileSystemService =  $container->get('uvdesk.core.file_system.service');
 
+        $supportGroup = $ticket->getSupportGroup();
+
+        if (!empty($supportGroup)) {
+            $supportGroup = [
+                'id' => $supportGroup->getId(), 
+                'name' => $supportGroup->getName(), 
+            ];
+        }
+
+        $supportTeam = $ticket->getSupportTeam();
+
+        if (!empty($supportTeam)) {
+            $supportTeam = [
+                'id' => $supportTeam->getId(), 
+                'name' => $supportTeam->getName(), 
+            ];
+        }
+
         $ticketDetails = [
             'id' => $ticket->getId(), 
             'source' => $ticket->getSource(), 
@@ -418,6 +436,8 @@ class Tickets extends AbstractController
             'isCustomerViewed' => $ticket->getIsCustomerViewed(), 
             'createdAt' => $userService->getLocalizedFormattedTime($ticket->getCreatedAt(), $user), 
             'updatedAt' => $userService->getLocalizedFormattedTime($ticket->getUpdatedAt(), $user), 
+            'group' => $supportGroup, 
+            'team' => $supportTeam, 
         ];
 
         $threads = array_map(function ($thread) use ($uvdesk, $userService, $fileSystemService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
