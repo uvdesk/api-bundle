@@ -27,6 +27,11 @@ SVG;
         return 'uvdesk_api_load_configurations';
     }
 
+    public static function getRoles() : array
+    {
+        return ['ROLE_ADMIN'];
+    }
+
     public function getChildrenRoutes() : array
     {
         return [];
