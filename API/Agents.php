@@ -109,11 +109,30 @@ class Agents extends AbstractController
 
             $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
             $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode($params['role']);
+
+            if ($supportRole->getId() == 4 ){
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Invalid agent role.',
+                ],404);
+            }
+
+            if (!empty($params['isActive'])) {
+                if ($params['isActive'] == '1' || $params['isActive'] == 'true') {
+                    $params['isActive'] = true;
+                } elseif ($params['isActive'] == '0') {
+                    $params['isActive'] = false;
+                } else {
+                    $params['isActive'] = false;
+                }
+            } else {
+                $params['isActive'] = false;
+            }
             
             $user = $userService->createUserInstance($request->request->get('email'), $fullname, $supportRole, [
                 'contact' => $params['contactNumber'],
                 'source' => 'website',
-                'active' => !empty($params['isActive']) ? true : false,
+                'active' => $params['isActive'],
                 'image' =>  $uploadedFiles ?  $uploadedFiles : null ,
                 'signature' => $params['signature'],
                 'designation' =>$params['designation']
@@ -135,7 +154,14 @@ class Agents extends AbstractController
             if (!empty($params['userSubGroup'])) {
                 $supportTeamRepository = $entityManager->getRepository(SupportTeam::class);
 
-                foreach ($params['userSubGroup'] as $supportTeamId) {
+                if (is_array($params['userSubGroup'])) {
+                    $convertTeamIntoString = implode(' ', $params['userSubGroup']);
+                    $userSubGroupIds = explode(',', $convertTeamIntoString);
+                } else {
+                    $userSubGroupIds = explode(',', $params['userSubGroup']);
+                }
+
+                foreach ($userSubGroupIds as $supportTeamId) {
                     $supportTeam = $supportTeamRepository->findOneById($supportTeamId);
 
                     if (!empty($supportTeam)) {
@@ -148,7 +174,14 @@ class Agents extends AbstractController
             if (!empty($params['groups'])) {
                 $supportGroupRepository = $entityManager->getRepository(SupportGroup::class);
 
-                foreach ($params['groups'] as $supportGroupId) {
+                if (is_array($params['groups'])){
+                    $convertGroupIntoString = implode(' ', $params['groups']);
+                    $groupIds = explode(',', $convertGroupIntoString);
+                } else {
+                    $groupIds = explode(',', $params['groups']);
+                }
+
+                foreach ($groupIds as $supportGroupId) {
                     $supportGroup = $supportGroupRepository->findOneById($supportGroupId);
 
                     if (!empty($supportGroup)) {
@@ -161,7 +194,14 @@ class Agents extends AbstractController
             if (!empty($params['agentPrivilege'])) {
                 $supportPrivilegeRepository = $entityManager->getRepository(SupportPrivilege::class);
 
-                foreach($params['agentPrivilege'] as $supportPrivilegeId) {
+                if (is_array($params['agentPrivilege'])) {
+                    $convertStrings = implode(' ', $params['agentPrivilege']);
+                    $priviligesId = explode(',', $convertStrings);
+                } else {
+                    $priviligesId = explode(',', $params['agentPrivilege']); 
+                }
+
+                foreach($priviligesId as $supportPrivilegeId) {
                     $supportPrivilege = $supportPrivilegeRepository->findOneById($supportPrivilegeId);
 
                     if (!empty($supportPrivilege)) {
@@ -269,13 +309,32 @@ class Agents extends AbstractController
                 $userInstance->setProfileImagePath(null);
             }
 
-
+            if (!empty($params['isActive'])) {
+                if ($params['isActive'] == '1' || $params['isActive'] == 'true') {
+                    $params['isActive'] = true;
+                } elseif ($params['isActive'] == '0') {
+                    $params['isActive'] = false;
+                } else {
+                    $params['isActive'] = false;
+                }
+            } else {
+                $params['isActive'] = false;
+            }
+            
             $userInstance->setSignature($params['signature']);
-            $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
+            $userInstance->setIsActive($params['isActive']);
 
             //Team support to agent 
             if(isset($params['userSubGroup'])){
-                foreach ($params['userSubGroup'] as $userSubGroup) {
+
+                if (is_array($params['userSubGroup'])) {
+                    $convertTeamIntoString = implode(' ', $params['userSubGroup']);
+                    $userSubGroupIds = explode(',', $convertTeamIntoString);
+                } else {
+                    $userSubGroupIds = explode(',', $params['userSubGroup']);
+                }
+
+                foreach ($userSubGroupIds as $userSubGroup) {
                     if($userSubGrp = $uvdeskService->getEntityManagerResult(
                         SupportTeam::class,
                         'findOneBy', [
@@ -298,7 +357,15 @@ class Agents extends AbstractController
 
              //Group support  
             if(isset($params['groups'])){
-                foreach ($params['groups'] as $userGroup) {
+
+                if (is_array($params['groups'])){
+                    $convertGroupIntoString = implode(' ', $params['groups']);
+                    $groupIds = explode(',', $convertGroupIntoString);
+                } else {
+                    $groupIds = explode(',', $params['groups']);
+                }
+
+                foreach ($groupIds as $userGroup) {
                     if($userGrp = $uvdeskService->getEntityManagerResult(
                         SupportGroup::class,
                         'findOneBy', [
@@ -322,7 +389,15 @@ class Agents extends AbstractController
 
             //Privilegs support 
             if(isset($params['agentPrivilege'])){
-                foreach ($params['agentPrivilege'] as $supportPrivilege) {
+
+                if (is_array($params['agentPrivilege'])) {
+                    $convertStrings = implode(' ', $params['agentPrivilege']);
+                    $priviligesId = explode(',', $convertStrings);
+                } else {
+                    $priviligesId = explode(',', $params['agentPrivilege']); 
+                }
+
+                foreach ($priviligesId as $supportPrivilege) {
                     if($supportPlg = $uvdeskService->getEntityManagerResult(
                         SupportPrivilege::class,
                         'findOneBy', [
@@ -336,6 +411,7 @@ class Agents extends AbstractController
                         }elseif($oldSupportedPrivilege && ($key = array_search($supportPlg, $oldSupportedPrivilege)) !== false)
                             unset($oldSupportedPrivilege[$key]);
                 }
+
                 foreach ($oldSupportedPrivilege as $removeGroup) {
                     $userInstance->removeSupportPrivilege($removeGroup);
                     $em->persist($userInstance);
