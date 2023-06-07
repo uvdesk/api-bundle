@@ -85,8 +85,7 @@ class Agents extends AbstractController
 
     public function createAgentRecord(Request $request,EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
-        $agentRecord = new User();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
         $user = $entityManager->getRepository(User::class)->findOneByEmail($params['email']);
         $agentInstance = !empty($user) ? $user->getAgentInstance() : null;
 
@@ -129,7 +128,7 @@ class Agents extends AbstractController
                 $params['isActive'] = false;
             }
             
-            $user = $userService->createUserInstance($request->request->get('email'), $fullname, $supportRole, [
+            $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
                 'contact' => $params['contactNumber'],
                 'source' => 'website',
                 'active' => $params['isActive'],
@@ -153,14 +152,7 @@ class Agents extends AbstractController
             // Map support team
             if (!empty($params['userSubGroup'])) {
                 $supportTeamRepository = $entityManager->getRepository(SupportTeam::class);
-
-                if (is_array($params['userSubGroup'])) {
-                    $convertTeamIntoString = implode(' ', $params['userSubGroup']);
-                    $userSubGroupIds = explode(',', $convertTeamIntoString);
-                } else {
-                    $userSubGroupIds = explode(',', $params['userSubGroup']);
-                }
-
+                $userSubGroupIds = is_array($params['userSubGroup']) ? $params['userSubGroup'] : explode(',', $params['userSubGroup']);
                 foreach ($userSubGroupIds as $supportTeamId) {
                     $supportTeam = $supportTeamRepository->findOneById($supportTeamId);
 
@@ -173,14 +165,7 @@ class Agents extends AbstractController
             // Map support group
             if (!empty($params['groups'])) {
                 $supportGroupRepository = $entityManager->getRepository(SupportGroup::class);
-
-                if (is_array($params['groups'])){
-                    $convertGroupIntoString = implode(' ', $params['groups']);
-                    $groupIds = explode(',', $convertGroupIntoString);
-                } else {
-                    $groupIds = explode(',', $params['groups']);
-                }
-
+                $groupIds = is_array($params['groups']) ? $params['groups'] : explode(',', $params['groups']);
                 foreach ($groupIds as $supportGroupId) {
                     $supportGroup = $supportGroupRepository->findOneById($supportGroupId);
 
@@ -193,14 +178,7 @@ class Agents extends AbstractController
             // Map support privileges
             if (!empty($params['agentPrivilege'])) {
                 $supportPrivilegeRepository = $entityManager->getRepository(SupportPrivilege::class);
-
-                if (is_array($params['agentPrivilege'])) {
-                    $convertStrings = implode(' ', $params['agentPrivilege']);
-                    $priviligesId = explode(',', $convertStrings);
-                } else {
-                    $priviligesId = explode(',', $params['agentPrivilege']); 
-                }
-
+                $priviligesId = is_array($params['agentPrivilege']) ? $params['agentPrivilege'] : explode(',', $params['agentPrivilege']);
                 foreach($priviligesId as $supportPrivilegeId) {
                     $supportPrivilege = $supportPrivilegeRepository->findOneById($supportPrivilegeId);
 
