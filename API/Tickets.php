@@ -401,10 +401,31 @@ class Tickets extends AbstractController
         }, $entityManager->getRepository(TicketPriority::class)->findAll());
       
         $userService = $container->get('user.service');
+        $fileSystemService =  $container->get('uvdesk.core.file_system.service');
+
+        $supportGroup = $ticket->getSupportGroup();
+
+        if (!empty($supportGroup)) {
+            $supportGroup = [
+                'id' => $supportGroup->getId(), 
+                'name' => $supportGroup->getName(), 
+            ];
+        }
+
+        $supportTeam = $ticket->getSupportTeam();
+
+        if (!empty($supportTeam)) {
+            $supportTeam = [
+                'id' => $supportTeam->getId(), 
+                'name' => $supportTeam->getName(), 
+            ];
+        }
 
         $ticketDetails = [
             'id' => $ticket->getId(), 
             'source' => $ticket->getSource(), 
+            'priority' => $ticket->getPriority()->getId(), 
+            'status' => $ticket->getStatus()->getId(), 
             'subject' => $ticket->getSubject(), 
             'isNew' => $ticket->getIsNew(), 
             'isReplied' => $ticket->getIsReplied(), 
@@ -415,11 +436,17 @@ class Tickets extends AbstractController
             'isCustomerViewed' => $ticket->getIsCustomerViewed(), 
             'createdAt' => $userService->getLocalizedFormattedTime($ticket->getCreatedAt(), $user), 
             'updatedAt' => $userService->getLocalizedFormattedTime($ticket->getUpdatedAt(), $user), 
+            'group' => $supportGroup, 
+            'team' => $supportTeam, 
         ];
 
-        $threads = array_map(function ($thread) use ($uvdesk, $userService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
+        $threads = array_map(function ($thread) use ($uvdesk, $userService, $fileSystemService, $defaultAgentProfileImagePath, $defaultCustomerProfileImagePath) {
             $user = $thread->getUser();
             $userInstance = $thread->getCreatedBy() == 'agent' ? $user->getAgentInstance() : $user->getCustomerInstance();
+
+            $attachments = array_map(function ($attachment) use ($fileSystemService) {
+                return $fileSystemService->getFileTypeAssociations($attachment);
+            }, $thread->getAttachments()->getValues());
 
             $thumbnail = $uvdesk->generateCompleteLocalResourcePathUri($userInstance->getProfileImagePath() ?? ($thread->getCreatedBy() == 'agent' ? $defaultAgentProfileImagePath : $defaultCustomerProfileImagePath));
 
@@ -442,12 +469,14 @@ class Tickets extends AbstractController
                     'email' => $user->getEmail(), 
                     'thumbnail' => $thumbnail, 
                 ], 
+                'attachments' => $attachments,
             ];
         }, $ticket->getThreads()->getValues());
 
         $ticketDetails['threads'] = $threads;
         $ticketDetails['agent'] = $agentDetails;
         $ticketDetails['customer'] = $customerDetails;
+        $ticketDetails['totalThreads'] = count($threads);
         
         return new JsonResponse([
             'ticket' => $ticketDetails,

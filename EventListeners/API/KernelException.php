@@ -19,11 +19,14 @@ class KernelException
 
     public function onKernelException(ExceptionEvent $event)
     {
+        return;
         $request = $event->getRequest();
         $exception = $event->getThrowable();
 
         // Proceed only if we're in the 'uvdesk_api' firewall
-        if ('uvdesk_api' != $this->firewall->getFirewallConfig($request)->getName()) {
+        $firewall = $this->firewall->getFirewallConfig($request);
+
+        if (empty($firewall) || 'uvdesk_api' != $firewall->getName()) {
             return;
         }
 

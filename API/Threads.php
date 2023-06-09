@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\Attachment;
+
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 
 class Threads extends AbstractController
@@ -25,6 +27,7 @@ class Threads extends AbstractController
     public function saveThread(Request $request, $ticketid, ContainerInterface $container)
     {
         $data = $request->request->all()? : json_decode($request->getContent(),true);
+        $entityManager = $this->getDoctrine()->getManager();
 
         if (!isset($data['threadType']) || !isset($data['message'])) {
             $json['error'] = 'missing fields';
@@ -123,7 +126,7 @@ class Threads extends AbstractController
                     ->setThread($thread)
                 ;
 
-                $this->container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
+                $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Note added to ticket successfully.";
                 return new JsonResponse($json, Response::HTTP_OK);

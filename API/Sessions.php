@@ -10,12 +10,14 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
+use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService as Uvdesk;
 
 class Sessions extends AbstractController
 {
-    public function loginSession(Request $request, EntityManagerInterface $entityManager)
+    public function loginSession(Request $request, EntityManagerInterface $entityManager, Uvdesk $uvdesk)
     {
         $user = $this->getUser();
+        $userInstance = $user->getCurrentInstance();
 
         if (empty($user)) {
             return new JsonResponse([
@@ -40,6 +42,7 @@ class Sessions extends AbstractController
         return new JsonResponse([
             'success' => true, 
             'accessToken' => $accessCredential->getToken(), 
+            'scopes' => $uvdesk->getAvailableUserAccessScopes($user, $userInstance), 
         ]);
     }
 

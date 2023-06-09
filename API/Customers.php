@@ -18,7 +18,6 @@ use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem as Fileservice;
 
-
 class Customers extends AbstractController
 {
     public function loadCustomers(Request $request, EntityManagerInterface $entityManager)
@@ -97,50 +96,47 @@ class Customers extends AbstractController
             }
         }
 
-        if (empty($customerInstance)) {
-            
-            $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
-            $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
-            
-            $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
-                'contact' => $params['contactNumber'],
-                'source' => 'website',
-                'active' => !empty($params['isActive']) ? true : false,
-                'image' => $uploadedFiles,
-            ]);
-
-            if(!empty($user)){
-                $user->setIsEnabled(true);
-                $entityManager->persist($user);
-                $entityManager->flush();
-            }
-
-            return new JsonResponse([
-                'success' => true, 
-                'message' => 'Customer saved successfully.', 
-            ]);
-
-        
-        } else {
+        if (!empty($customerInstance)) {
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'User with same email already exist.', 
             ],404);
         }
+
+        $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
+        $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode('ROLE_CUSTOMER');
+        
+        $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
+            'contact' => $params['contactNumber'],
+            'source' => 'website',
+            'active' => !empty($params['isActive']) ? true : false,
+            'image' => $uploadedFiles,
+        ]);
+
+        if(!empty($user)){
+            $user->setIsEnabled(true);
+            $entityManager->persist($user);
+            $entityManager->flush();
+        }
+
+        return new JsonResponse([
+            'success' => true, 
+            'message' => 'Customer saved successfully.', 
+        ]);
     }
 
 
-    public function updateCustomerRecored(Request $request, $customerId, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
+    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
     {
         $params = $request->request->all();
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
         $repository = $em->getRepository(User::class);
         
-        if ($customerId) {
-            $user = $repository->findOneBy(['id' =>  $customerId]);
+        if ($id) {
+            $user = $repository->findOneBy(['id' =>  $id]);
             if (!$user) {
-                $id = $customerId;
+                $id = $id;
                 return new JsonResponse([
                     'success' => false, 
                     'message' => "User not found with this id '$id' ."
@@ -159,12 +155,12 @@ class Customers extends AbstractController
             }
         }
         
-        if ($customerId) {
+        if ($id) {
             $checkUser = $em->getRepository(User::class)->findOneBy(array('email' => $params['email']));
             $errorFlag = 0;
             
             if($checkUser) {
-                if($checkUser->getId() != $customerId)
+                if($checkUser->getId() != $id)
                 $errorFlag = 1;
             }
             
@@ -243,5 +239,41 @@ class Customers extends AbstractController
             'success' => false, 
             'message' => "Invalid credentials provided."
         ],404);
+    }
+
+    public function deleteCustomerRecored(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $user = $em->getRepository(User::class)->findOneBy(['id' => $customerId]);
+        
+        if (empty($user)) {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => "Customer not found with this id '$customerId'."
+            ],404);
+        }
+        
+        $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4));
+
+        if (empty($userInstance)) {
+            return new JsonResponse([
+                'success' => false, 
+                'message' => "Authorization failed."
+            ],404);
+        }
+
+        $userService->removeCustomer($user);
+        // Trigger customer created event
+        $event = new CoreWorkflowEvents\Customer\Delete();
+        $event
+            ->setUser($user)
+        ;
+
+        $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+
+        return new JsonResponse([
+            'success' => true, 
+            'message' => "Customer removed successfully."
+        ]);
     }
 }

@@ -17,3 +17,8 @@ uvdesk_api_bundle_v1.0.0_agents_api_update_agent:
     path: /agents/update/{agentId}
     controller: Webkul\UVDesk\ApiBundle\API\Agents::updateAgentRecord
     methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_agents_api_delete_agent:
+    path: /agents/delete/{agentId}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::deleteAgentRecord
+    methods: [DELETE]
