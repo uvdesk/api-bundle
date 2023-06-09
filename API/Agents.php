@@ -305,13 +305,8 @@ class Agents extends AbstractController
             //Team support to agent 
             if(isset($params['userSubGroup'])){
 
-                if (is_array($params['userSubGroup'])) {
-                    $convertTeamIntoString = implode(' ', $params['userSubGroup']);
-                    $userSubGroupIds = explode(',', $convertTeamIntoString);
-                } else {
-                    $userSubGroupIds = explode(',', $params['userSubGroup']);
-                }
-
+                $userSubGroupIds = is_array($params['userSubGroup']) ? $params['userSubGroup'] : explode(',', $params['userSubGroup']);
+                
                 foreach ($userSubGroupIds as $userSubGroup) {
                     if($userSubGrp = $uvdeskService->getEntityManagerResult(
                         SupportTeam::class,
@@ -336,12 +331,7 @@ class Agents extends AbstractController
              //Group support  
             if(isset($params['groups'])){
 
-                if (is_array($params['groups'])){
-                    $convertGroupIntoString = implode(' ', $params['groups']);
-                    $groupIds = explode(',', $convertGroupIntoString);
-                } else {
-                    $groupIds = explode(',', $params['groups']);
-                }
+                $groupIds = is_array($params['groups']) ? $params['groups'] : explode(',', $params['groups']); 
 
                 foreach ($groupIds as $userGroup) {
                     if($userGrp = $uvdeskService->getEntityManagerResult(
@@ -368,12 +358,7 @@ class Agents extends AbstractController
             //Privilegs support 
             if(isset($params['agentPrivilege'])){
 
-                if (is_array($params['agentPrivilege'])) {
-                    $convertStrings = implode(' ', $params['agentPrivilege']);
-                    $priviligesId = explode(',', $convertStrings);
-                } else {
-                    $priviligesId = explode(',', $params['agentPrivilege']); 
-                }
+                $priviligesId = is_array($params['agentPrivilege']) ? $params['agentPrivilege'] : explode(',', $params['agentPrivilege']);
 
                 foreach ($priviligesId as $supportPrivilege) {
                     if($supportPlg = $uvdeskService->getEntityManagerResult(
