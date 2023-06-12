@@ -22,6 +22,7 @@ use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketPriority;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketType;
+use Symfony\Component\Filesystem\Filesystem;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService;
@@ -506,6 +507,17 @@ class Tickets extends AbstractController
         }
 
         if ($ticket->getIsTrashed()) {
+            
+            $threads = $ticket->getThreads();
+            $fileService = new Filesystem();
+            if (count($threads) > 0) {
+                foreach($threads as $thread) {
+                    if (!empty($thread)) {
+                        $fileService->remove($container->getParameter('kernel.project_dir').'/public/assets/threads/'.$thread->getId());
+                    }
+                }
+            }
+    
             $entityManager->remove($ticket);
             $entityManager->flush();
 
