@@ -4,6 +4,7 @@ CHANGELOG for 1.1.x
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
 * 1.1.x
+    * Update: Dropped dependency on uvdesk/composer-plugin in support of symfony/flex
     * Feature: Add api endpoints for sessions, me, agents, customers, groups, teams, ticket, threads, and ticket-type helpdesk resources
 
 * 1.1.1.1 (2023-02-14)
