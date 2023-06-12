@@ -11,16 +11,12 @@
     ],
     "require": {
         "php": "^7.2.5 || ^8.0",
-        "uvdesk/composer-plugin": "^1.1",
         "uvdesk/core-framework": "^1.1"
     },
     "autoload": {
         "psr-4": {
             "Webkul\\UVDesk\\ApiBundle\\": ""
         }
-    },
-    "extra": {
-        "uvdesk-package-extension": "Webkul\\UVDesk\\ApiBundle\\Package\\PackageConfiguration"
     },
     "minimum-stability": "stable"
 }
