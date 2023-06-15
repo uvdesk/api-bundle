@@ -45,6 +45,7 @@ class KernelRequest
 
         if ('OPTIONS' == $request->getRealMethod() || 'POST' == $request->getRealMethod() || 'GET' == $request->getRealMethod()) {
             $response = $event->getResponse();
+            
             $response->headers->set('Access-Control-Allow-Origin', '*');
             $response->headers->set('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
             $response->headers->set('Access-Control-Allow-Headers', ['Access-Control-Allow-Origin', 'Authorization', 'Content-Type']);
