@@ -76,6 +76,7 @@ class Sessions extends AbstractController
         }
 
         $apiAccessCredential
+            ->setIsEnabled(false)
             ->setIsExpired(true)
         ;
 
