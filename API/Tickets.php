@@ -552,6 +552,13 @@ class Tickets extends AbstractController
            
             if ($agent) {
                 if($ticket->getAgent() != $agent) {
+                    
+                    if ($ticket->getIsTrashed()) {
+                        $json['status'] = false;
+                        $json['error'] = $container->get('translator')->trans('Tickets is in trashed can not assign to agent.'); 
+                        return new JsonResponse($json, Response::HTTP_BAD_REQUEST);   
+                    }
+
                     $ticket->setAgent($agent);
                     $entityManager->persist($ticket);
                     $entityManager->flush();
