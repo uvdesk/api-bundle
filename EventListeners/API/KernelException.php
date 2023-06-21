@@ -19,6 +19,7 @@ class KernelException
 
     public function onKernelException(ExceptionEvent $event)
     {
+        return;
         $request = $event->getRequest();
         $exception = $event->getThrowable();
 

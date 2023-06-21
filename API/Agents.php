@@ -58,7 +58,7 @@ class Agents extends AbstractController
     public function loadAgentDetails($id, Request $request)
     {
         $user = $this->getDoctrine()->getRepository(User::class)->findOneById($id);
-
+        
         if (empty($user)) {
             return new JsonResponse([
                 'success' => false, 
@@ -83,113 +83,138 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function createAgentRecord(Request $request, EntityManagerInterface $entityManager, UserService $userService)
+    public function createAgentRecord(Request $request,EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
-        $agentRecord = new User();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
         $user = $entityManager->getRepository(User::class)->findOneByEmail($params['email']);
         $agentInstance = !empty($user) ? $user->getAgentInstance() : null;
 
-        if (!empty($agentInstance)) {
+        if (empty($agentInstance)) {
+            
+            $formDetails = $request->request->get('user_form');
+            $uploadedFiles = $request->files->get('user_form');
+            
+            // Profile upload validation
+            $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
+
+            if (isset( $uploadedFiles)) {
+                if(!in_array($uploadedFiles->getMimeType(), $validMimeType)){
+                    return new JsonResponse([
+                        'success' => false, 
+                        'message' => 'Profile image is not valid, please upload a valid format', 
+                    ]);
+                }
+            }
+
+            $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
+            $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode($params['role']);
+
+            if ($supportRole->getId() == 4 ){
+                return new JsonResponse([
+                    'success' => false, 
+                    'message' => 'Invalid agent role.',
+                ],404);
+            }
+
+            if (!empty($params['isActive'])) {
+                if ($params['isActive'] == '1' || $params['isActive'] == 'true') {
+                    $params['isActive'] = true;
+                } elseif ($params['isActive'] == '0') {
+                    $params['isActive'] = false;
+                } else {
+                    $params['isActive'] = false;
+                }
+            } else {
+                $params['isActive'] = false;
+            }
+            
+            $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
+                'contact' => $params['contactNumber'],
+                'source' => 'website',
+                'active' => $params['isActive'],
+                'image' =>  $uploadedFiles ?  $uploadedFiles : null ,
+                'signature' => $params['signature'],
+                'designation' =>$params['designation']
+            ]);
+
+            if(!empty($user)){
+                $user->setIsEnabled(true);
+                $entityManager->persist($user);
+                $entityManager->flush();
+            }
+
+            $userInstance = $user->getAgentInstance();
+
+            if (isset($params['ticketView'])) {
+                $userInstance->setTicketAccessLevel($params['ticketView']);
+            }
+
+            // Map support team
+            if (!empty($params['userSubGroup'])) {
+                $supportTeamRepository = $entityManager->getRepository(SupportTeam::class);
+
+                $userSubGroupIds = is_array($params['userSubGroup']) ? $params['userSubGroup'] : explode(',', $params['userSubGroup']);
+                
+                foreach ($userSubGroupIds as $supportTeamId) {
+                    $supportTeam = $supportTeamRepository->findOneById($supportTeamId);
+
+                    if (!empty($supportTeam)) {
+                        $userInstance->addSupportTeam($supportTeam);
+                    }
+                }
+            }
+            
+            // Map support group
+            if (!empty($params['groups'])) {
+                $supportGroupRepository = $entityManager->getRepository(SupportGroup::class);
+
+                $groupIds = is_array($params['groups']) ? $params['groups'] : explode(',', $params['groups']);
+
+                foreach ($groupIds as $supportGroupId) {
+                    $supportGroup = $supportGroupRepository->findOneById($supportGroupId);
+
+                    if (!empty($supportGroup)) {
+                        $userInstance->addSupportGroup($supportGroup);
+                    }
+                }
+            }
+
+            // Map support privileges
+            if (!empty($params['agentPrivilege'])) {
+                $supportPrivilegeRepository = $entityManager->getRepository(SupportPrivilege::class);
+                $priviligesId = is_array($params['agentPrivilege']) ? $params['agentPrivilege'] : explode(',', $params['agentPrivilege']);
+                foreach($priviligesId as $supportPrivilegeId) {
+                    $supportPrivilege = $supportPrivilegeRepository->findOneById($supportPrivilegeId);
+
+                    if (!empty($supportPrivilege)) {
+                        $userInstance->addSupportPrivilege($supportPrivilege);
+                    }
+                }
+            }
+
+            $entityManager->persist($userInstance);
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'success' => true, 
+                'message' => 'Agent added successfully.', 
+            ]);
+
+        
+        } else {
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'Agent with same email already exist.', 
-            ]);
+            ],404);
         }
-        
-        $formDetails = $request->request->get('user_form');
-        $uploadedFiles = $request->files->get('user_form');
-        
-        // Profile upload validation
-        $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
-
-        if (isset( $uploadedFiles)) {
-            if (!in_array($uploadedFiles->getMimeType(), $validMimeType)){
-                return new JsonResponse([
-                    'success' => false, 
-                    'message' => 'Profile image is not valid, please upload a valid format', 
-                ]);
-            }
-        }
-
-        $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
-        $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode($params['role']);
-        
-        $user = $userService->createUserInstance($request->request->get('email'), $fullname, $supportRole, [
-            'contact' => $params['contactNumber'],
-            'source' => 'website',
-            'active' => !empty($params['isActive']) ? true : false,
-            'image' =>  $uploadedFiles ?  $uploadedFiles : null ,
-            'signature' => $params['signature'],
-            'designation' =>$params['designation']
-        ]);
-
-        if (!empty($user)) {
-            $user->setIsEnabled(true);
-            $entityManager->persist($user);
-            $entityManager->flush();
-        }
-
-        $userInstance = $user->getAgentInstance();
-
-        if (isset($params['ticketView'])) {
-            $userInstance->setTicketAccessLevel($params['ticketView']);
-        }
-
-        // Map support team
-        if (!empty($params['userSubGroup'])) {
-            $supportTeamRepository = $entityManager->getRepository(SupportTeam::class);
-
-            foreach ($params['userSubGroup'] as $supportTeamId) {
-                $supportTeam = $supportTeamRepository->findOneById($supportTeamId);
-
-                if (!empty($supportTeam)) {
-                    $userInstance->addSupportTeam($supportTeam);
-                }
-            }
-        }
-        
-        // Map support group
-        if (!empty($params['groups'])) {
-            $supportGroupRepository = $entityManager->getRepository(SupportGroup::class);
-
-            foreach ($params['groups'] as $supportGroupId) {
-                $supportGroup = $supportGroupRepository->findOneById($supportGroupId);
-
-                if (!empty($supportGroup)) {
-                    $userInstance->addSupportGroup($supportGroup);
-                }
-            }
-        }
-
-        // Map support privileges
-        if (!empty($params['agentPrivilege'])) {
-            $supportPrivilegeRepository = $entityManager->getRepository(SupportPrivilege::class);
-
-            foreach($params['agentPrivilege'] as $supportPrivilegeId) {
-                $supportPrivilege = $supportPrivilegeRepository->findOneById($supportPrivilegeId);
-
-                if (!empty($supportPrivilege)) {
-                    $userInstance->addSupportPrivilege($supportPrivilege);
-                }
-            }
-        }
-
-        $entityManager->persist($userInstance);
-        $entityManager->flush();
-
-        return new JsonResponse([
-            'success' => true, 
-            'message' => 'Agent added successfully.', 
-        ]);
     }
 
-    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
+    public function updateAgentRecord(Request $request, $agentId, UVDeskService $uvdeskService, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
-        $user = $em->getRepository(User::class)->find($id);
+        $user = $em->getRepository(User::class)->find($agentId);
         $instanceRole = $user->getAgentInstance()->getSupportRole()->getCode();
         
         if (empty($user)) {
@@ -212,8 +237,8 @@ class Agents extends AbstractController
 
         $checkUser = $em->getRepository(User::class)->findOneBy(array('email'=> $params['email']));
         $errorFlag = 0;
-        
-        if ($checkUser && $checkUser->getId() != $id) {
+        // dd($checkUser);
+        if ($checkUser && $checkUser->getId() != $agentId) {
             $errorFlag = 1;
         }
 
@@ -237,7 +262,7 @@ class Agents extends AbstractController
             $user->setEmail($params['email']);
             $user->setIsEnabled(true);
             
-            $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $id, 'supportRole' => array(1, 2, 3)));        
+            $userInstance = $em->getRepository(UserInstance::class)->findOneBy(array('user' => $agentId, 'supportRole' => array(1, 2, 3)));        
             $oldSupportTeam = ($supportTeamList = $userInstance != null ? $userInstance->getSupportTeams() : null) ? $supportTeamList->toArray() : [];
             $oldSupportGroup  = ($supportGroupList = $userInstance != null ? $userInstance->getSupportGroups() : null) ? $supportGroupList->toArray() : [];
             $oldSupportedPrivilege = ($supportPrivilegeList = $userInstance != null ? $userInstance->getSupportPrivileges() : null)? $supportPrivilegeList->toArray() : [];
@@ -267,13 +292,27 @@ class Agents extends AbstractController
                 $userInstance->setProfileImagePath(null);
             }
 
-
+            if (!empty($params['isActive'])) {
+                if ($params['isActive'] == '1' || $params['isActive'] == 'true') {
+                    $params['isActive'] = true;
+                } elseif ($params['isActive'] == '0') {
+                    $params['isActive'] = false;
+                } else {
+                    $params['isActive'] = false;
+                }
+            } else {
+                $params['isActive'] = false;
+            }
+            
             $userInstance->setSignature($params['signature']);
-            $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
+            $userInstance->setIsActive($params['isActive']);
 
             //Team support to agent 
             if(isset($params['userSubGroup'])){
-                foreach ($params['userSubGroup'] as $userSubGroup) {
+
+                $userSubGroupIds = is_array($params['userSubGroup']) ? $params['userSubGroup'] : explode(',', $params['userSubGroup']);
+                
+                foreach ($userSubGroupIds as $userSubGroup) {
                     if($userSubGrp = $uvdeskService->getEntityManagerResult(
                         SupportTeam::class,
                         'findOneBy', [
@@ -296,7 +335,10 @@ class Agents extends AbstractController
 
              //Group support  
             if(isset($params['groups'])){
-                foreach ($params['groups'] as $userGroup) {
+
+                $groupIds = is_array($params['groups']) ? $params['groups'] : explode(',', $params['groups']); 
+
+                foreach ($groupIds as $userGroup) {
                     if($userGrp = $uvdeskService->getEntityManagerResult(
                         SupportGroup::class,
                         'findOneBy', [
@@ -320,7 +362,10 @@ class Agents extends AbstractController
 
             //Privilegs support 
             if(isset($params['agentPrivilege'])){
-                foreach ($params['agentPrivilege'] as $supportPrivilege) {
+
+                $priviligesId = is_array($params['agentPrivilege']) ? $params['agentPrivilege'] : explode(',', $params['agentPrivilege']);
+
+                foreach ($priviligesId as $supportPrivilege) {
                     if($supportPlg = $uvdeskService->getEntityManagerResult(
                         SupportPrivilege::class,
                         'findOneBy', [
@@ -334,6 +379,7 @@ class Agents extends AbstractController
                         }elseif($oldSupportedPrivilege && ($key = array_search($supportPlg, $oldSupportedPrivilege)) !== false)
                             unset($oldSupportedPrivilege[$key]);
                 }
+
                 foreach ($oldSupportedPrivilege as $removeGroup) {
                     $userInstance->removeSupportPrivilege($removeGroup);
                     $em->persist($userInstance);
