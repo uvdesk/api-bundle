@@ -141,7 +141,13 @@ class Threads extends AbstractController
                 return new JsonResponse($json, Response::HTTP_OK);
                 break;
             case 'reply':
-                $event = new CoreWorkflowEvents\Ticket\AgentReply();
+                
+                if ($customer) {
+                    $event = new CoreWorkflowEvents\Ticket\CustomerReply();
+                } else {
+                    $event = new CoreWorkflowEvents\Ticket\AgentReply();
+                }
+
                 $event
                     ->setTicket($ticket)
                     ->setThread($thread)
