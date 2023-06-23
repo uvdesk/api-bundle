@@ -19,7 +19,7 @@ class ApiSettings extends AbstractController
     public function loadConfigurations(ContainerInterface $container)
     {
         if (!$container->get('user.service')->isAccessAuthorized('ROLE_ADMIN')) {
-            throw new AccessDeniedException("Insufficient account privileges");
+            return $this->render('@UVDeskApi//accessCredentials.html.twig');
         }
 
         return $this->render('@UVDeskApi//accessCredentials.html.twig');
