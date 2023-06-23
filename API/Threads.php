@@ -99,6 +99,7 @@ class Threads extends AbstractController
             $ticketStatus =  $this->getDoctrine()->getRepository(TicketStatus::class)->findOneByCode($data['status']);
             $ticket->setStatus($ticketStatus);
         }
+        
         if (isset($data['to'])) {
             $threadDetails['to'] = $data['to'];
         }
@@ -115,20 +116,25 @@ class Threads extends AbstractController
             $threadDetails['bcc'] = $data['bcc'];
         }
 
+        
+        $customer = $this->getDoctrine()->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4 ));
+        
+        if (!empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'note') {
+            $json['success'] = "success', Can't add note user account.";
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'forward') {
+            $json['success'] = "success', Can't forward ticket to user account.";
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         // Create Thread
         $thread = $container->get('ticket.service')->createThread($ticket, $threadDetails);
-
-        $customer = $this->getDoctrine()->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4 ));
         
         // Check for thread types
         switch ($thread->getThreadType()) {
             case 'note':
-
-                if ($customer) {
-                    $json['success'] = "success', Can't add note user account.";
-                    return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
-                }
-
                 $event = new CoreWorkflowEvents\Ticket\Note();
                 $event
                     ->setTicket($ticket)
@@ -154,10 +160,6 @@ class Threads extends AbstractController
                 break;
             case 'forward':
                 // Prepare headers
-                if ($customer) {
-                    $json['success'] = "success', Can't forward ticket to user account.";
-                    return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
-                }
 
                 $headers = ['References' => $ticket->getReferenceIds()];
 
