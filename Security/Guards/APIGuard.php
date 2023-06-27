@@ -152,6 +152,24 @@ class APIGuard extends AbstractGuardAuthenticator
                 ];
                 
                 break;
+            case 'An authentication exception occurred.':
+                if ($request->attributes->get('_route') == 'uvdesk_api_bundle_sessions_api_v1.0_logout_session'){
+                    $data = [
+                        'status' => false,
+                        'message' => 'This Session token has been already expired successfully.',
+                        'error_code' => self::INVALID_CREDNETIALS,
+                    ];
+
+                    return new JsonResponse($data, Response::HTTP_FORBIDDEN);
+                }
+
+                $data = [
+                    'status' => false,
+                    'message' => 'This api is disabled from admin end, please check once again.',
+                    'error_code' => self::INVALID_CREDNETIALS,
+                ];
+                
+                break;
             default:
                 $data = [
                     'status' => false,
