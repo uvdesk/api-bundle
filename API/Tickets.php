@@ -222,16 +222,15 @@ class Tickets extends AbstractController
             }
             
             if (!$error) {
-                $name = explode(' ',$data['name']);
+                $name = explode(' ',trim($data['name']));
                 $ticketData['firstName'] = $name[0];
                 $ticketData['lastName'] = isset($name[1]) ? $name[1] : '';
                 $ticketData['role'] = 4;
-             
-                if ((array_key_exists('actAsType', $data)) && strtolower($data['actAsType']) == 'customer') {
-                    $actAsType = strtolower($data['actAsType']);             
-                } else if((array_key_exists('actAsEmail', $data)) && strtolower($data['actAsType']) == 'agent') {
-                    $user = $entityManager->getRepository(User::class)->findOneByEmail($data['actAsEmail']);
-                    
+                if ((array_key_exists('actAsType', $data)) && strtolower(trim($data['actAsType'])) == 'customer') {
+                    $actAsType = strtolower(trim($data['actAsType']));             
+                } else if((array_key_exists('actAsEmail', $data)) && strtolower(trim($data['actAsType'])) == 'agent') {
+                    $user = $entityManager->getRepository(User::class)->findOneByEmail(trim($data['actAsEmail']));
+
                     if ($user) {
                         $actAsType = 'agent';
                     } else {
@@ -269,8 +268,8 @@ class Tickets extends AbstractController
                 }
                 
                 $ticketData['user'] = $data['user'];
-                $ticketData['subject'] = $data['subject'];
-                $ticketData['message'] = $data['message'];
+                $ticketData['subject'] = trim($data['subject']);
+                $ticketData['message'] = trim($data['message']);
                 $ticketData['customer'] = $customer;
                 $ticketData['source'] = 'api';
                 $ticketData['threadType'] = 'create';

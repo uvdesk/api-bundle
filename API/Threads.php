@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Attachment;
 
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
@@ -117,9 +118,17 @@ class Threads extends AbstractController
         // Create Thread
         $thread = $container->get('ticket.service')->createThread($ticket, $threadDetails);
 
+        $customer = $this->getDoctrine()->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4 ));
+        
         // Check for thread types
         switch ($thread->getThreadType()) {
             case 'note':
+
+                if ($customer) {
+                    $json['success'] = "success', Can't add note user account.";
+                    return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+                }
+
                 $event = new CoreWorkflowEvents\Ticket\Note();
                 $event
                     ->setTicket($ticket)
@@ -145,6 +154,11 @@ class Threads extends AbstractController
                 break;
             case 'forward':
                 // Prepare headers
+                if ($customer) {
+                    $json['success'] = "success', Can't forward ticket to user account.";
+                    return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+                }
+
                 $headers = ['References' => $ticket->getReferenceIds()];
 
                 if (null != $ticket->currentThread->getMessageId()) {
