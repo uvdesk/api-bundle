@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity\Attachment;
 
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
@@ -98,6 +99,7 @@ class Threads extends AbstractController
             $ticketStatus =  $this->getDoctrine()->getRepository(TicketStatus::class)->findOneByCode($data['status']);
             $ticket->setStatus($ticketStatus);
         }
+        
         if (isset($data['to'])) {
             $threadDetails['to'] = $data['to'];
         }
@@ -114,9 +116,22 @@ class Threads extends AbstractController
             $threadDetails['bcc'] = $data['bcc'];
         }
 
+        
+        $customer = $this->getDoctrine()->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4 ));
+        
+        if (!empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'note') {
+            $json['success'] = "success', Can't add note user account.";
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'forward') {
+            $json['success'] = "success', Can't forward ticket to user account.";
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         // Create Thread
         $thread = $container->get('ticket.service')->createThread($ticket, $threadDetails);
-
+        
         // Check for thread types
         switch ($thread->getThreadType()) {
             case 'note':
@@ -132,11 +147,19 @@ class Threads extends AbstractController
                 return new JsonResponse($json, Response::HTTP_OK);
                 break;
             case 'reply':
-                $event = new CoreWorkflowEvents\Ticket\AgentReply();
-                $event
-                    ->setTicket($ticket)
-                    ->setThread($thread)
-                ;
+                if ($thread->getcreatedBy() == 'customer') {
+                    $event = new CoreWorkflowEvents\Ticket\CustomerReply();
+                    $event
+                        ->setTicket($ticket)
+                        ->setThread($thread)
+                    ;
+                } else {
+                    $event = new CoreWorkflowEvents\Ticket\AgentReply();
+                    $event
+                        ->setTicket($ticket)
+                        ->setThread($thread)
+                    ;
+                }
 
                 $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
@@ -145,6 +168,7 @@ class Threads extends AbstractController
                 break;
             case 'forward':
                 // Prepare headers
+
                 $headers = ['References' => $ticket->getReferenceIds()];
 
                 if (null != $ticket->currentThread->getMessageId()) {
