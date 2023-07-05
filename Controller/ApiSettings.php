@@ -19,20 +19,20 @@ class ApiSettings extends AbstractController
     public function loadConfigurations(ContainerInterface $container)
     {
         if (!$container->get('user.service')->isAccessAuthorized('ROLE_ADMIN')) {
-            throw new AccessDeniedException("Insufficient account privileges");
+            return $this->render('@UVDeskApi//accessCredentials.html.twig');
         }
 
         return $this->render('@UVDeskApi//accessCredentials.html.twig');
     }
 
-    public function loadConfigurationsXHR(Request $request, UserInterface $user, EntityManagerInterface $entityManager)
+    public function loadConfigurationsXHR(Request $request, UserInterface $user, EntityManagerInterface $entityManager, ContainerInterface $container)
     {
         if (!empty($user)) {
-            $collection = array_map(function ($accessCredential) {
+            $collection = array_map(function ($accessCredential) use ($container){
                 return [
                     'id' => $accessCredential->getId(),
                     'name' => $accessCredential->getName(),
-                    'token' => $accessCredential->getToken(),
+                    'token' =>  $container->get('user.service')->isAccessAuthorized('ROLE_ADMIN') ? $accessCredential->getToken() : substr($accessCredential->getToken(), 0, 20)."...",
                     'dateCreated' => $accessCredential->getCreatedOn()->format('(l) F d, Y \a\t H:i:s'),
                     'isEnabled' => $accessCredential->getIsEnabled(),
                 ];

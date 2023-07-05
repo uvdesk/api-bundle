@@ -24,7 +24,7 @@ class ApiSettings implements PanelSidebarItemInterface
 
     public static function getRoles() : array
     {
-        return ['ROLE_ADMIN'];
+        return [];
     }
 
     public static function getSidebarReferenceId() : string

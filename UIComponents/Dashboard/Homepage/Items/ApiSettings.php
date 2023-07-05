@@ -30,7 +30,7 @@ SVG;
 
     public static function getRoles() : array
     {
-        return ['ROLE_ADMIN'];
+        return [];
     }
 
     public static function getSectionReferenceId() : string
