@@ -77,9 +77,22 @@ class Customers extends AbstractController
         ]);
     }
 
-    public function createCustomerRecored(Request $request, EntityManagerInterface $entityManager, UserService $userService)
+    public function createCustomerRecored(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
+
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach($params as $key => $value) {
+            if(!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email and firstName.');
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $user = $entityManager->getRepository(User::class)->findOneBy(array('email' => $params['email']));
         $customerInstance = !empty($user) ? $user->getCustomerInstance() : null;
         $uploadedFiles = $request->files->get('user_form');
@@ -91,7 +104,7 @@ class Customers extends AbstractController
             if(!in_array($uploadedFiles->getMimeType(), $validMimeType)){
                 return new JsonResponse([
                     'success' => false, 
-                    'message' => 'Profile image is not valid, please upload a valid format', 
+                    'message' => 'Profile image is not valid, please upload a valid format.', 
                 ],404);
             }
         }
@@ -126,9 +139,21 @@ class Customers extends AbstractController
     }
 
 
-    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
+    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, ContainerInterface $container, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach($params as $key => $value) {
+            if(!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email and firstName.');
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
         $repository = $em->getRepository(User::class);
