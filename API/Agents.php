@@ -83,9 +83,21 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function createAgentRecord(Request $request, EntityManagerInterface $entityManager, UserService $userService)
+    public function createAgentRecord(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach($params as $key => $value) {
+            if(!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive','signature','designation','role','ticketView','userSubGroup','groups','agentPrivilege'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName']) || empty($params['groups']) || empty($params['role'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email,firstName,lastName,groups and role.');
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $agentRecord = new User();
         $user = $entityManager->getRepository(User::class)->findOneByEmail($params['email']);
         $agentInstance = !empty($user) ? $user->getAgentInstance() : null;
@@ -97,13 +109,12 @@ class Agents extends AbstractController
             ]);
         }
         
-        $formDetails = $request->request->get('user_form');
         $uploadedFiles = $request->files->get('user_form');
         
         // Profile upload validation
         $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
 
-        if (isset( $uploadedFiles)) {
+        if (isset($uploadedFiles)) {
             if (!in_array($uploadedFiles->getMimeType(), $validMimeType)){
                 return new JsonResponse([
                     'success' => false, 
@@ -115,7 +126,7 @@ class Agents extends AbstractController
         $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
         $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode($params['role']);
         
-        $user = $userService->createUserInstance($request->request->get('email'), $fullname, $supportRole, [
+        $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
             'contact' => $params['contactNumber'],
             'source' => 'website',
             'active' => !empty($params['isActive']) ? true : false,
@@ -184,9 +195,21 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
+    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, ContainerInterface $container, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+    
+        foreach($params as $key => $value) {
+            if(!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive','signature','designation','role','ticketView','userSubGroup','groups','agentPrivilege'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName']) || empty($params['groups']) || empty($params['role'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email,firstName,lastName,groups and role.');
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
         $user = $em->getRepository(User::class)->find($id);
