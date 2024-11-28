@@ -284,7 +284,7 @@ More examples of ticket related apis can be found over [here][6].
 License
 --------------
 
-The API Bundle and libraries included within the bundle are released under the MIT or BSD license.
+The API Bundle and libraries included within the bundle are released under released under the [OSL-3.0 license][7]
 
 [1]: https://www.uvdesk.com/
 [2]: https://symfony.com/
@@ -292,3 +292,4 @@ The API Bundle and libraries included within the bundle are released under the M
 [4]: https://flex.symfony.com/
 [5]: https://getcomposer.org/
 [6]: https://github.com/uvdesk/api-bundle/wiki/Ticket-Related-APIs
+[7]: https://github.com/uvdesk/api-bundle/blob/master/LICENSE.txt
