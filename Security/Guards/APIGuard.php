@@ -70,14 +70,14 @@ class APIGuard extends AbstractGuardAuthenticator
                     list($email, $password) = explode(':', base64_decode($accessToken));
 
                     return [
-                        'email' => $email, 
+                        'email'    => $email, 
                         'password' => $password, 
                     ];
                 } else {
                     $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($accessToken);
                     
                     return [
-                        'email' => $user['email'], 
+                        'email'       => $user['email'], 
                         'accessToken' => $accessToken, 
                     ];
                 }
@@ -108,11 +108,15 @@ class APIGuard extends AbstractGuardAuthenticator
 
         if (!empty($credentials['accessToken'])) {
             $accessCredentials = $this->entityManager->getRepository(ApiAccessCredential::class)->findOneBy([
-                'user' => $user,
+                'user'  => $user,
                 'token' => $credentials['accessToken'],
             ]);
 
-            if (!empty($accessCredentials) && true == $accessCredentials->getIsEnabled() && false == $accessCredentials->getIsExpired()) {
+            if (
+                ! empty($accessCredentials)
+                && true == $accessCredentials->getIsEnabled()
+                && false == $accessCredentials->getIsExpired()
+            ) {
                 return true;
             }
         }
@@ -138,24 +142,42 @@ class APIGuard extends AbstractGuardAuthenticator
         switch ($exception->getMessageKey()) {
             case 'Username could not be found.':
                 $data = [
-                    'status' => false,
-                    'message' => 'No such user found',
+                    'status'     => false,
+                    'message'    => 'No such user found',
                     'error_code' => self::USER_NOT_FOUND,
                 ];
                 
                 break;
             case 'Invalid Credentials.':
                 $data = [
-                    'status' => false,
-                    'message' => 'Invalid credentials provided.',
+                    'status'     => false,
+                    'message'    => 'Invalid credentials provided.',
+                    'error_code' => self::INVALID_CREDNETIALS,
+                ];
+
+                break;
+            case 'An authentication exception occurred.':
+                if ($request->attributes->get('_route') == 'uvdesk_api_bundle_sessions_api_v1.0_logout_session'){
+                    $data = [
+                        'status'     => false,
+                        'message'    => 'This Session token has been already expired successfully.',
+                        'error_code' => self::INVALID_CREDNETIALS,
+                    ];
+
+                    return new JsonResponse($data, Response::HTTP_FORBIDDEN);
+                }
+
+                $data = [
+                    'status'     => false,
+                    'message'    => 'This api is disabled from admin end, please check once again.',
                     'error_code' => self::INVALID_CREDNETIALS,
                 ];
                 
                 break;
             default:
                 $data = [
-                    'status' => false,
-                    'message' => strtr($exception->getMessageKey(), $exception->getMessageData()),
+                    'status'     => false,
+                    'message'    => strtr($exception->getMessageKey(), $exception->getMessageData()),
                     'error_code' => self::UNEXPECTED_ERROR,
                 ];
 
@@ -168,8 +190,8 @@ class APIGuard extends AbstractGuardAuthenticator
     public function start(Request $request, AuthenticationException $authException = null)
     {
         $data = [
-            'status' => false,
-            'message' => 'Authentication Required',
+            'status'     => false,
+            'message'    => 'Authentication Required',
             'error_code' => self::API_NOT_AUTHENTICATED,
         ];
 
