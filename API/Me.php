@@ -24,11 +24,11 @@ class Me extends AbstractController
         return new JsonResponse([
             'success' => true, 
             'me' => [
-                'id' => $user->getId(), 
-                'email' => $user->getEmail(), 
-                'name' => trim(implode(' ', array_values(array_filter([$user->getFirstName(), $user->getLastName()])))), 
+                'id'        => $user->getId(), 
+                'email'     => $user->getEmail(), 
+                'name'      => trim(implode(' ', array_values(array_filter([$user->getFirstName(), $user->getLastName()])))), 
                 'firstName' => $user->getFirstName(), 
-                'lastName' => $user->getLastName(), 
+                'lastName'  => $user->getLastName(), 
                 'isEnabled' => $user->getIsEnabled(), 
                 'thumbnail' => $thumbnail, 
             ], 
