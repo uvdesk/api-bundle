@@ -17,8 +17,7 @@ class Group extends AbstractController
     public function loadGroup(Request $request, ContainerInterface $container)
     {
         $groupCollection = $this->getDoctrine()->getRepository(SupportGroup::class)->getAllGroups($request->query, $container);
-        
-        if(empty($groupCollection)){
+        if (empty($groupCollection)) {
             return new JsonResponse([
                 'success' => false, 
                 'message' => " No record found.", 
@@ -26,7 +25,7 @@ class Group extends AbstractController
         }
 
         return new JsonResponse([
-            'success' => true, 
+            'success'    => true, 
             'collection' => !empty($groupCollection) ? $groupCollection : [], 
         ]);
     }
@@ -43,45 +42,60 @@ class Group extends AbstractController
         }
         
         $groupDetails = [
-            'id' => $group->getId(),
-            'name' => $group->getName(),
+            'id'          => $group->getId(),
+            'name'        => $group->getName(),
             'description' => $group->getDescription(),
-            'isActive' => $group->getIsActive() 
+            'isActive'    => $group->getIsActive() 
         ];
 
         return new JsonResponse([
             'success' => true, 
-            'group' => $groupDetails, 
+            'group'   => $groupDetails, 
         ]);
     }
 
-    public function createGroupRecord(Request $request)
+    public function createGroupRecord(Request $request, ContainerInterface $container)
     {
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach ($params as $key => $value) {
+            if (!in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
+                unset($params[$key]);
+            }
+        }
+        
+        if (empty($params['name']) || empty($params['description'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: name and description.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+        
         $group = new SupportGroup;
-        $allDetails = $request->request->all();
         $em = $this->getDoctrine()->getManager();
-        $group->setName($allDetails['name']);
-        $group->setDescription($allDetails['description']);
-        $group->setIsActive((bool) isset($allDetails['isActive']));
-        $usersList = (!empty($allDetails['users'])) ? $allDetails['users'] : [];
-        $userTeam  = (!empty($allDetails['supportTeams'])) ? $allDetails['supportTeams'] : [];
+        $group->setName($params['name']);
+        $group->setDescription($params['description']);
+        $group->setIsActive((bool) isset($params['isActive']));
+        $usersList = (!empty($params['users'])) ? $params['users'] : [];
+        $userTeam  = (!empty($params['supportTeams'])) ? $params['supportTeams'] : [];
         
         if (!empty($usersList)) {
             $usersList = array_map(function ($user) { return 'user.id = ' . $user; }, $usersList);
             
             $userList = $em->createQueryBuilder()->select('user')
-            ->from(User::class, 'user')
-            ->where(implode(' OR ', $usersList))
-            ->getQuery()->getResult();
+                ->from(User::class, 'user')
+                ->where(implode(' OR ', $usersList))
+                ->getQuery()->getResult()
+            ;
         }
         
         if (!empty($userTeam)) {
             $userTeam = array_map(function ($team) { return 'team.id = ' . $team; }, $userTeam);
 
             $userTeam = $em->createQueryBuilder()->select('team')
-            ->from(SupportTeam::class, 'team')
-            ->where(implode(' OR ', $userTeam))
-            ->getQuery()->getResult();
+                ->from(SupportTeam::class, 'team')
+                ->where(implode(' OR ', $userTeam))
+                ->getQuery()->getResult()
+            ;
         }
 
         if (!empty($userList)) {
@@ -103,13 +117,26 @@ class Group extends AbstractController
 
         return new JsonResponse([
             'success' => true, 
-            'group' => 'Group information saved successfully.' 
+            'group'   => 'Group information saved successfully.' 
         ]);
     }
     
-    public function updateGroupRecord(Request $request, $groupId)
+    public function updateGroupRecord(Request $request, $groupId, ContainerInterface $container)
     {
-        $allDetails = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach ($params as $key => $value) {
+            if(!in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
+                unset($params[$key]);
+            }
+        }
+        
+        if (empty($params['name']) || empty($params['description'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: name and description.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $group = new SupportGroup;
         $em = $this->getDoctrine()->getManager();
 
@@ -118,44 +145,47 @@ class Group extends AbstractController
             if (empty($group)){
                 return new JsonResponse([
                     'success' => true, 
-                    'group' => 'Support group not found.' 
+                    'group'   => 'Support group not found.' 
                 ]);  
             }
 
-            $data = $request->request->all() ? : json_decode($request->getContent(), true);
-            $request->request->replace($data);
+            $request->request->replace($params);
 
-            if($request->request->get('tempUsers'))
-            $request->request->set('users', explode(',', $request->request->get('tempUsers')));
+            if ($params('tempUsers')) {
+                $request->request->set('users', explode(',', $params('tempUsers')));
+            }
             
-            if($request->request->get('tempTeams'))
-            $request->request->set('supportTeams', explode(',', $request->request->get('tempTeams')));
+            if ($params('tempTeams')) {
+                $request->request->set('supportTeams', explode(',', $params('tempTeams')));
+            }
             
             $oldUsers = ($usersList = $group->getUsers()) ? $usersList->toArray() : [];
             $oldTeam  = ($teamList = $group->getSupportTeams()) ? $teamList->toArray() : [];
             
-            $group->setName($allDetails['name']);
-            $group->setDescription($allDetails['description']);
-            $group->setIsActive((bool) isset($allDetails['isActive']));
+            $group->setName($params['name']);
+            $group->setDescription($params['description']);
+            $group->setIsActive((bool) isset($params['isActive']));
             
-            $usersList = (!empty($allDetails['users']))? $allDetails['users'] : [];
-            $userTeam  = (!empty($allDetails['supportTeams']))? $allDetails['supportTeams'] : [];
+            $usersList = (!empty($params['users']))? $params['users'] : [];
+            $userTeam  = (!empty($params['supportTeams']))? $params['supportTeams'] : [];
 
             if (!empty($usersList)) {
                 $usersList = array_map(function ($user) { return 'user.id = ' . $user; }, $usersList);
                 $userList = $em->createQueryBuilder()->select('user')
-                ->from(User::class, 'user')
-                ->where(implode(' OR ', $usersList))
-                ->getQuery()->getResult();
+                    ->from(User::class, 'user')
+                    ->where(implode(' OR ', $usersList))
+                    ->getQuery()->getResult()
+                ;
             }
             
             if (!empty($userTeam)) {
                 $userTeam = array_map(function ($team) { return 'team.id = ' . $team; }, $userTeam);
                 
                 $userTeam = $em->createQueryBuilder()->select('team')
-                ->from(SupportTeam::class, 'team')
-                ->where(implode(' OR ', $userTeam))
-                ->getQuery()->getResult();
+                    ->from(SupportTeam::class, 'team')
+                    ->where(implode(' OR ', $userTeam))
+                    ->getQuery()->getResult()
+                ;
             }
             
             if (!empty($userList)) {
@@ -163,16 +193,18 @@ class Group extends AbstractController
                 foreach ($userList as $user) {
                     $userInstance = $user->getAgentInstance();
 
-                    if(!$oldUsers || !in_array($userInstance, $oldUsers)){
+                    if (!$oldUsers || !in_array($userInstance, $oldUsers)) {
                         $userInstance->addSupportGroup($group);
                         $em->persist($userInstance);
                     } elseif ($oldUsers && ($key = array_search($userInstance, $oldUsers)) !== false)
                         unset($oldUsers[$key]);
                 }
+
                 foreach ($oldUsers as $removeUser) {
                     $removeUser->removeSupportGroup($group);
                     $em->persist($removeUser);
                 }
+                
             } else {
                 foreach ($oldUsers as $removeUser) {
                     $removeUser->removeSupportGroup($group);
@@ -183,10 +215,9 @@ class Group extends AbstractController
             if (!empty($userTeam)) {
                 // Add Teams to Group
                 foreach ($userTeam as $supportTeam) {
-
-                    if(!$oldTeam || !in_array($supportTeam, $oldTeam)){
+                    if (!$oldTeam || !in_array($supportTeam, $oldTeam)){
                         $group->addSupportTeam($supportTeam);
-                    }elseif($oldTeam && ($key = array_search($supportTeam, $oldTeam)) !== false)
+                    } elseif ($oldTeam && ($key = array_search($supportTeam, $oldTeam)) !== false)
                         unset($oldTeam[$key]);
                 }
 
@@ -207,10 +238,9 @@ class Group extends AbstractController
             
             return new JsonResponse([
                 'success' => true, 
-                'group' => 'Group information update successfully.' 
+                'group'   => 'Group information update successfully.' 
             ]);   
         }
-
     }
 
     public function deleteGroupRecord(Request $request, $groupId)
@@ -222,7 +252,7 @@ class Group extends AbstractController
             return new JsonResponse([
                 'success' => false,
                 'message' => 'Support Group not found.',
-            ],404);
+            ], 404);
         }
 
         $entityManager->remove($supportGroup);
@@ -230,7 +260,7 @@ class Group extends AbstractController
         
         return new JsonResponse([
             'success' => true, 
-            'group' => 'Support Group removed successfully.'
+            'group'   => 'Support Group removed successfully.'
         ]);
     }
 
