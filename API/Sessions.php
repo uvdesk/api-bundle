@@ -40,9 +40,9 @@ class Sessions extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse([
-            'success' => true, 
+            'success'     => true, 
             'accessToken' => $accessCredential->getToken(), 
-            'scopes' => $uvdesk->getAvailableUserAccessScopes($user, $userInstance), 
+            'scopes'      => $uvdesk->getAvailableUserAccessScopes($user, $userInstance), 
         ]);
     }
 
@@ -76,6 +76,7 @@ class Sessions extends AbstractController
         }
 
         $apiAccessCredential
+            ->setIsEnabled(false)
             ->setIsExpired(true)
         ;
 
@@ -83,7 +84,7 @@ class Sessions extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse([
-            'status' => true,
+            'status'  => true,
             'message' => 'Session token has been expired successfully.'
         ]);
     }
