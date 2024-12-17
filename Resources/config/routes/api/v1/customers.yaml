@@ -15,10 +15,10 @@ uvdesk_api_bundle_v1.0.0_agents_api_create_customer:
 
 uvdesk_api_bundle_v1.0.0_agents_api_update_customer:
     path: /customers/update/{id}
-    controller: Webkul\UVDesk\ApiBundle\API\Customers::updateCustomerRecored
+    controller: Webkul\UVDesk\ApiBundle\API\Customers::updateCustomerRecord
     methods: [POST]
 
 uvdesk_api_bundle_v1.0.0_agents_api_delete_customer:
     path: /customers/delete/{customerId}
-    controller: Webkul\UVDesk\ApiBundle\API\Customers::deleteCustomerRecored
+    controller: Webkul\UVDesk\ApiBundle\API\Customers::deleteCustomerRecord
     methods: [DELETE]

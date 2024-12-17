@@ -138,7 +138,7 @@ class Customers extends AbstractController
     }
 
 
-    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, ContainerInterface $container, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
+    public function updateCustomerRecord($id, Request $request, FileSystem $fileSystem, ContainerInterface $container, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
     {
         $params = $request->request->all()? : json_decode($request->getContent(),true);
         foreach ($params as $key => $value) {
@@ -265,7 +265,7 @@ class Customers extends AbstractController
         ], 404);
     }
 
-    public function deleteCustomerRecored(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
+    public function deleteCustomerRecord(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
     {
         $em = $this->getDoctrine()->getManager();
         $user = $em->getRepository(User::class)->findOneBy(['id' => $customerId]);
