@@ -231,15 +231,21 @@ class Tickets extends AbstractController
             }
             
             if (! $error) {
-                $name = explode(' ',$data['name']);
+                $name = explode(' ', trim($data['name']));
                 $ticketData['firstName'] = $name[0];
                 $ticketData['lastName']  = isset($name[1]) ? $name[1] : '';
                 $ticketData['role']      = 4;
              
-                if ((array_key_exists('actAsType', $data)) && strtolower($data['actAsType']) == 'customer') {
-                    $actAsType = strtolower($data['actAsType']);             
-                } else if ((array_key_exists('actAsEmail', $data)) && strtolower($data['actAsType']) == 'agent') {
-                    $user = $entityManager->getRepository(User::class)->findOneByEmail($data['actAsEmail']);
+                if (
+                    (array_key_exists('actAsType', $data))
+                    && (strtolower($data['actAsType']) == 'customer')
+                ) {
+                    $actAsType = strtolower(trim($data['actAsType']));         
+                } else if (
+                    (array_key_exists('actAsEmail', $data)) 
+                    && (strtolower(trim($data['actAsType'])) == 'agent')
+                ) {
+                    $user = $entityManager->getRepository(User::class)->findOneByEmail(trim($data['actAsEmail']));
                     
                     if ($user) {
                         $actAsType = 'agent';
@@ -274,13 +280,13 @@ class Tickets extends AbstractController
                 }
 
                 $attachments = $request->files->get('attachments');
-                if (!empty($attachments)) {
-                        $attachments = is_array($attachments) ? $attachments : [$attachments];
+                if (! empty($attachments)) {
+                    $attachments = is_array($attachments) ? $attachments : [$attachments];
                 }
                 
                 $ticketData['user']        = $data['user'];
-                $ticketData['subject']     = $data['subject'];
-                $ticketData['message']     = $data['message'];
+                $ticketData['subject']     = trim($data['subject']);
+                $ticketData['message']     = trim($data['message']);
                 $ticketData['customer']    = $customer;
                 $ticketData['source']      = 'api';
                 $ticketData['threadType']  = 'create';
@@ -415,7 +421,7 @@ class Tickets extends AbstractController
 
         $supportGroup = $ticket->getSupportGroup();
 
-        if (!empty($supportGroup)) {
+        if (! empty($supportGroup)) {
             $supportGroup = [
                 'id'   => $supportGroup->getId(), 
                 'name' => $supportGroup->getName(), 
@@ -424,7 +430,7 @@ class Tickets extends AbstractController
 
         $supportTeam = $ticket->getSupportTeam();
 
-        if (!empty($supportTeam)) {
+        if (! empty($supportTeam)) {
             $supportTeam = [
                 'id'   => $supportTeam->getId(), 
                 'name' => $supportTeam->getName(), 
@@ -511,7 +517,7 @@ class Tickets extends AbstractController
         $entityManager = $this->getDoctrine()->getManager();
         $ticket = $entityManager->getRepository(Ticket::class)->find($ticketId);
         
-        if (!$ticket) {
+        if (! $ticket) {
             throw new NotFoundHttpException('Page Not Found');
         }
 
@@ -822,7 +828,10 @@ class Tickets extends AbstractController
                 $agentDetails = $agentInstance->getPartialDetails();
 
                 // Check if ticket is already assigned to the agent
-                if ($ticket->getAgent() && $agent->getId() === $ticket->getAgent()->getId()) {
+                if (
+                    $ticket->getAgent() 
+                    && $agent->getId() === $ticket->getAgent()->getId()
+                ) {
                     $json['success']  = $container->get('translator')->trans('Already assigned');
                     $json['description'] = $container->get('translator')->trans('Ticket already assigned to %agent%', [
                         '%agent%' => $agentDetails['name']]);
@@ -931,6 +940,7 @@ class Tickets extends AbstractController
                         '%priority%' => $ticketPriority->getDescription()
                     ]);
                     $statusCode = Response::HTTP_OK;
+
                     return new JsonResponse($json, $statusCode);
                 }
                 break;
@@ -957,7 +967,10 @@ class Tickets extends AbstractController
                     return new JsonResponse($json, $statusCode);
                 }
 
-                if ($ticket->getSupportGroup() != null && $supportGroup->getId() === $ticket->getSupportGroup()->getId()) {
+                if (
+                    ! empty($ticket->getSupportGroup())
+                    && $supportGroup->getId() === $ticket->getSupportGroup()->getId()
+                ) {
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] = $container->get('translator')->trans('Ticket already assigned to support group');
                     $statusCode = Response::HTTP_OK;
@@ -1012,12 +1025,15 @@ class Tickets extends AbstractController
                     }
                 }
 
-                if ($ticket->getSupportTeam() != null && $supportTeam->getId() === $ticket->getSupportTeam()->getId()) {
-                        $json['success']  = $container->get('translator')->trans('Success');
-                        $json['description'] = $container->get('translator')->trans('Ticket already assigned to support team');
-                        $statusCode = Response::HTTP_OK;
+                if (
+                    ! empty($ticket->getSupportTeam())
+                    && $supportTeam->getId() === $ticket->getSupportTeam()->getId()
+                ) {
+                    $json['success']  = $container->get('translator')->trans('Success');
+                    $json['description'] = $container->get('translator')->trans('Ticket already assigned to support team');
+                    $statusCode = Response::HTTP_OK;
                         
-                        return new JsonResponse($json, $statusCode);
+                    return new JsonResponse($json, $statusCode);
                 } else {
                     $ticket->setSupportTeam($supportTeam);
                     $entityManager->persist($ticket);
@@ -1051,11 +1067,14 @@ class Tickets extends AbstractController
                     $json['error']  = $container->get('translator')->trans('Error');
                     $json['description'] = $container->get('translator')->trans('Unable to retrieve ticket type details');
                     $statusCode = Response::HTTP_BAD_REQUEST;
-                   
+                    
                     return new JsonResponse($json, $statusCode);
                 }
 
-                if (null != $ticket->getType() && $ticketType->getId() === $ticket->getType()->getId()) {
+                if (
+                    ! empty($ticket->getType())
+                    && $ticketType->getId() === $ticket->getType()->getId()
+                ) {
                     $json['success']  = $container->get('translator')->trans('Success');
                     $json['description'] = $container->get('translator')->trans('Ticket type already set to ' . $ticketType->getDescription());
                     $statusCode = Response::HTTP_OK;
