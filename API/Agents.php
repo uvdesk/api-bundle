@@ -50,7 +50,7 @@ class Agents extends AbstractController
         $collection = $qb->getQuery()->getResult();
 
         return new JsonResponse([
-            'success' => true, 
+            'success'    => true, 
             'collection' => !empty($collection) ? $collection : [], 
         ]);
     }
@@ -67,13 +67,13 @@ class Agents extends AbstractController
         }
         
         $agentDetails = [
-            'id' => $user->getId(), 
-            'firstName' => $user->getFirstName(),
-            'lastName' => $user->getLastName(),
-            'userEmail' => $user->getUsername(),
-            'isEnabled' => $user->getIsEnabled(),
-            'isActive' => $user->getAgentInstance()->getIsActive(),
-            'isVerified' => $user->getAgentInstance()->getIsVerified(),
+            'id'            => $user->getId(), 
+            'firstName'     => $user->getFirstName(),
+            'lastName'      => $user->getLastName(),
+            'userEmail'     => $user->getUsername(),
+            'isEnabled'     => $user->getIsEnabled(),
+            'isActive'      => $user->getAgentInstance()->getIsActive(),
+            'isVerified'    => $user->getAgentInstance()->getIsVerified(),
             'contactNumber' => $user->getAgentInstance()->getContactNumber()
         ];
         
@@ -83,9 +83,22 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function createAgentRecord(Request $request, EntityManagerInterface $entityManager, UserService $userService)
+    public function createAgentRecord(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach ($params as $key => $value) {
+            if (!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive','signature','designation','role','ticketView','userSubGroup','groups','agentPrivilege'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName']) || empty($params['groups']) || empty($params['role'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email,firstName,lastName,groups and role.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $agentRecord = new User();
         $user = $entityManager->getRepository(User::class)->findOneByEmail($params['email']);
         $agentInstance = !empty($user) ? $user->getAgentInstance() : null;
@@ -97,14 +110,13 @@ class Agents extends AbstractController
             ]);
         }
         
-        $formDetails = $request->request->get('user_form');
         $uploadedFiles = $request->files->get('user_form');
         
         // Profile upload validation
         $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
 
-        if (isset( $uploadedFiles)) {
-            if (!in_array($uploadedFiles->getMimeType(), $validMimeType)){
+        if (isset($uploadedFiles)) {
+            if (!in_array($uploadedFiles->getMimeType(), $validMimeType)) {
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Profile image is not valid, please upload a valid format', 
@@ -115,13 +127,13 @@ class Agents extends AbstractController
         $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
         $supportRole = $entityManager->getRepository(SupportRole::class)->findOneByCode($params['role']);
         
-        $user = $userService->createUserInstance($request->request->get('email'), $fullname, $supportRole, [
-            'contact' => $params['contactNumber'],
-            'source' => 'website',
-            'active' => !empty($params['isActive']) ? true : false,
-            'image' =>  $uploadedFiles ?  $uploadedFiles : null ,
-            'signature' => $params['signature'],
-            'designation' =>$params['designation']
+        $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
+            'contact'     => $params['contactNumber'],
+            'source'      => 'website',
+            'active'      => !empty($params['isActive']) ? true : false,
+            'image'       => $uploadedFiles ?  $uploadedFiles : null ,
+            'signature'   => $params['signature'],
+            'designation' => $params['designation']
         ]);
 
         if (!empty($user)) {
@@ -184,9 +196,21 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
+    public function updateAgentRecord($id, Request $request, UVDeskService $uvdeskService, ContainerInterface $container, UserPasswordEncoderInterface $passwordEncoder, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+    
+        foreach ($params as $key => $value) {
+            if (!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive','signature','designation','role','ticketView','userSubGroup','groups','agentPrivilege'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName']) || empty($params['groups']) || empty($params['role'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email,firstName,lastName,groups and role.');
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
         $user = $em->getRepository(User::class)->find($id);
@@ -196,17 +220,17 @@ class Agents extends AbstractController
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'Agent not found.', 
-            ],404);
+            ], 404);
         }
 
         // Agent Profile upload validation
         $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
-        if(isset($dataFiles)){
-            if(!in_array($dataFiles->getMimeType(), $validMimeType)){
+        if (isset($dataFiles)) {
+            if (!in_array($dataFiles->getMimeType(), $validMimeType)){
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Profile image is not valid, please upload a valid format.', 
-                ],404);
+                ], 404);
             }
         }
 
@@ -221,14 +245,14 @@ class Agents extends AbstractController
             if (
                 isset($params['password']['first']) && !empty(trim($params['password']['first'])) 
                 && isset($params['password']['second'])  && !empty(trim($params['password']['second']))) {
-                    if(trim($params['password']['first']) == trim($params['password']['second'])){
+                    if (trim($params['password']['first']) == trim($params['password']['second'])){
                         $encodedPassword = $passwordEncoder->encodePassword($user, $params['password']['first']);
                         $user->setPassword($encodedPassword);
                     } else {
                         return new JsonResponse([
                             'success' => false, 
                             'message' => 'Both password does not match together.', 
-                        ],404);
+                        ], 404);
                     }
             } 
 
@@ -242,7 +266,7 @@ class Agents extends AbstractController
             $oldSupportGroup  = ($supportGroupList = $userInstance != null ? $userInstance->getSupportGroups() : null) ? $supportGroupList->toArray() : [];
             $oldSupportedPrivilege = ($supportPrivilegeList = $userInstance != null ? $userInstance->getSupportPrivileges() : null)? $supportPrivilegeList->toArray() : [];
             
-            if(isset($params['role'])) {
+            if (isset($params['role'])) {
                 $role = $em->getRepository(SupportRole::class)->findOneBy(array('code' => $params['role']));
                 $userInstance->setSupportRole($role);
             }
@@ -271,21 +295,21 @@ class Agents extends AbstractController
             $userInstance->setSignature($params['signature']);
             $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
 
-            //Team support to agent 
-            if(isset($params['userSubGroup'])){
+            // Team support to agent 
+            if (isset($params['userSubGroup'])) {
                 foreach ($params['userSubGroup'] as $userSubGroup) {
-                    if($userSubGrp = $uvdeskService->getEntityManagerResult(
+                    if ($userSubGrp = $uvdeskService->getEntityManagerResult(
                         SupportTeam::class,
                         'findOneBy', [
                             'id' => $userSubGroup
                         ]
-                    )
-                    )
-                        if(!$oldSupportTeam || !in_array($userSubGrp, $oldSupportTeam)){
-                            $userInstance->addSupportTeam($userSubGrp);
+                    ))
 
-                        }elseif($oldSupportTeam && ($key = array_search($userSubGrp, $oldSupportTeam)) !== false)
-                            unset($oldSupportTeam[$key]);
+                    if (! $oldSupportTeam || !in_array($userSubGrp, $oldSupportTeam)) {
+                        $userInstance->addSupportTeam($userSubGrp);
+
+                    } elseif ($oldSupportTeam && ($key = array_search($userSubGrp, $oldSupportTeam)) !== false)
+                        unset($oldSupportTeam[$key]);
                 }
 
                 foreach ($oldSupportTeam as $removeteam) {
@@ -294,22 +318,21 @@ class Agents extends AbstractController
                 }
             }
 
-             //Group support  
-            if(isset($params['groups'])){
+            //Group support  
+            if (isset($params['groups'])) {
                 foreach ($params['groups'] as $userGroup) {
-                    if($userGrp = $uvdeskService->getEntityManagerResult(
+                    if ($userGrp = $uvdeskService->getEntityManagerResult(
                         SupportGroup::class,
                         'findOneBy', [
                             'id' => $userGroup
                         ]
-                    )
-                    )
+                    ))
 
-                        if(!$oldSupportGroup || !in_array($userGrp, $oldSupportGroup)){
-                            $userInstance->addSupportGroup($userGrp);
+                    if (!$oldSupportGroup || !in_array($userGrp, $oldSupportGroup)) {
+                        $userInstance->addSupportGroup($userGrp);
 
-                        }elseif($oldSupportGroup && ($key = array_search($userGrp, $oldSupportGroup)) !== false)
-                            unset($oldSupportGroup[$key]);
+                    } elseif ($oldSupportGroup && ($key = array_search($userGrp, $oldSupportGroup)) !== false)
+                        unset($oldSupportGroup[$key]);
                 }
 
                 foreach ($oldSupportGroup as $removeGroup) {
@@ -318,22 +341,23 @@ class Agents extends AbstractController
                 }
             }
 
-            //Privilegs support 
-            if(isset($params['agentPrivilege'])){
+            // Privilege support 
+            if (isset($params['agentPrivilege'])){
                 foreach ($params['agentPrivilege'] as $supportPrivilege) {
-                    if($supportPlg = $uvdeskService->getEntityManagerResult(
+                    if ($supportPlg = $uvdeskService->getEntityManagerResult(
                         SupportPrivilege::class,
                         'findOneBy', [
                             'id' => $supportPrivilege
                         ]
-                    )
-                    )
-                        if(!$oldSupportedPrivilege || !in_array($supportPlg, $oldSupportedPrivilege)){
-                            $userInstance->addSupportPrivilege($supportPlg);
+                    ))
 
-                        }elseif($oldSupportedPrivilege && ($key = array_search($supportPlg, $oldSupportedPrivilege)) !== false)
-                            unset($oldSupportedPrivilege[$key]);
+                    if (! $oldSupportedPrivilege || !in_array($supportPlg, $oldSupportedPrivilege)){
+                        $userInstance->addSupportPrivilege($supportPlg);
+
+                    } elseif ($oldSupportedPrivilege && ($key = array_search($supportPlg, $oldSupportedPrivilege)) !== false)
+                        unset($oldSupportedPrivilege[$key]);
                 }
+
                 foreach ($oldSupportedPrivilege as $removeGroup) {
                     $userInstance->removeSupportPrivilege($removeGroup);
                     $em->persist($userInstance);
@@ -363,16 +387,14 @@ class Agents extends AbstractController
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'User with same email is already exist.', 
-            ],404);
+            ], 404);
         }
-
     }
 
     public function deleteAgentRecord(Request $request, $agentId, EventDispatcherInterface $eventDispatcher, UserService $userService)
     {
         $entityManager = $this->getDoctrine()->getManager();
         if ($agentId) {
-                
             $user = $entityManager->createQueryBuilder()
                 ->select('u')
                 ->from(User::class, 'u')
@@ -387,7 +409,7 @@ class Agents extends AbstractController
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Agent information not found.', 
-                ],404);
+                ], 404);
             }
          
             if ($user->getAgentInstance()->getSupportRole()->getCode() != "ROLE_SUPER_ADMIN") {
@@ -417,7 +439,7 @@ class Agents extends AbstractController
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Authorization failed.', 
-                ],404);
+                ], 404);
             }
         }
     }

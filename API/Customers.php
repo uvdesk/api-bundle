@@ -44,7 +44,7 @@ class Customers extends AbstractController
         $collection = $qb->getQuery()->getResult();
 
         return new JsonResponse([
-            'success' => true, 
+            'success'    => true, 
             'collection' => $collection, 
         ]);
     }
@@ -61,25 +61,37 @@ class Customers extends AbstractController
         }
 
         $customerDetails = [
-            'id' => $user->getId(), 
-            'firstName' => $user->getFirstName(),
-            'lastName' => $user->getLastName(),
-            'userEmail' => $user->getUsername(),
-            'isEnabled' => $user->getIsEnabled(),
-            'isActive' => $user->getCustomerInstance()->getIsActive(),
-            'isVerified' => $user->getCustomerInstance()->getIsVerified(),
+            'id'            => $user->getId(), 
+            'firstName'     => $user->getFirstName(),
+            'lastName'      => $user->getLastName(),
+            'userEmail'     => $user->getUsername(),
+            'isEnabled'     => $user->getIsEnabled(),
+            'isActive'      => $user->getCustomerInstance()->getIsActive(),
+            'isVerified'    => $user->getCustomerInstance()->getIsVerified(),
             'contactNumber' => $user->getCustomerInstance()->getContactNumber()
         ];
 
         return new JsonResponse([
-            'success' => true, 
+            'success'  => true, 
             'customer' => $customerDetails
         ]);
     }
 
-    public function createCustomerRecored(Request $request, EntityManagerInterface $entityManager, UserService $userService)
+    public function createCustomerRecord(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        foreach($params as $key => $value) {
+            if (!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email and firstName.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $user = $entityManager->getRepository(User::class)->findOneBy(array('email' => $params['email']));
         $customerInstance = !empty($user) ? $user->getCustomerInstance() : null;
         $uploadedFiles = $request->files->get('user_form');
@@ -88,11 +100,11 @@ class Customers extends AbstractController
         $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
 
         if (isset( $uploadedFiles)) {
-            if(!in_array($uploadedFiles->getMimeType(), $validMimeType)){
+            if (!in_array($uploadedFiles->getMimeType(), $validMimeType)) {
                 return new JsonResponse([
                     'success' => false, 
-                    'message' => 'Profile image is not valid, please upload a valid format', 
-                ],404);
+                    'message' => 'Profile image is not valid, please upload a valid format.', 
+                ], 404);
             }
         }
 
@@ -100,7 +112,7 @@ class Customers extends AbstractController
             return new JsonResponse([
                 'success' => false, 
                 'message' => 'User with same email already exist.', 
-            ],404);
+            ], 404);
         }
 
         $fullname = trim(implode(' ', [$params['firstName'], $params['lastName']]));
@@ -108,12 +120,12 @@ class Customers extends AbstractController
         
         $user = $userService->createUserInstance($params['email'], $fullname, $supportRole, [
             'contact' => $params['contactNumber'],
-            'source' => 'website',
-            'active' => !empty($params['isActive']) ? true : false,
-            'image' => $uploadedFiles,
+            'source'  => 'website',
+            'active'  => !empty($params['isActive']) ? true : false,
+            'image'   => $uploadedFiles,
         ]);
 
-        if(!empty($user)){
+        if (!empty($user)) {
             $user->setIsEnabled(true);
             $entityManager->persist($user);
             $entityManager->flush();
@@ -126,9 +138,21 @@ class Customers extends AbstractController
     }
 
 
-    public function updateCustomerRecored($id, Request $request, FileSystem $fileSystem, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
+    public function updateCustomerRecord($id, Request $request, FileSystem $fileSystem, ContainerInterface $container, EventDispatcherInterface $eventDispatcher, UserPasswordEncoderInterface $passwordEncoder)
     {
-        $params = $request->request->all();
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        foreach ($params as $key => $value) {
+            if (!in_array($key, ['email', 'user_form', 'firstName', 'lastName','contactNumber','isActive'])) {
+                unset($params[$key]);
+            }
+        }
+
+        if (empty($params['email']) || empty($params['firstName'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: email and firstName.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+
         $dataFiles = $request->files->get('user_form');
         $em = $this->getDoctrine()->getManager();
         $repository = $em->getRepository(User::class);
@@ -140,14 +164,14 @@ class Customers extends AbstractController
                 return new JsonResponse([
                     'success' => false, 
                     'message' => "User not found with this id '$id' ."
-                ],404);
+                ], 404);
             }    
         }
         
         // Customer Profile upload validation
         $validMimeType = ['image/jpeg', 'image/png', 'image/jpg'];
-        if(isset($dataFiles)){
-            if(!in_array($dataFiles->getMimeType(), $validMimeType)){
+        if (isset($dataFiles)) {
+            if (!in_array($dataFiles->getMimeType(), $validMimeType)) {
                 return new JsonResponse([
                     'success' => false, 
                     'message' => 'Profile image is not valid, please upload a valid format', 
@@ -159,24 +183,26 @@ class Customers extends AbstractController
             $checkUser = $em->getRepository(User::class)->findOneBy(array('email' => $params['email']));
             $errorFlag = 0;
             
-            if($checkUser) {
+            if ($checkUser) {
                 if($checkUser->getId() != $id)
                 $errorFlag = 1;
             }
             
             if (!$errorFlag && 'hello@uvdesk.com' !== $user->getEmail()) {
-
                 if (
-                    isset($params['password']['first']) && !empty(trim($params['password']['first'])) 
-                    && isset($params['password']['second'])  && !empty(trim($params['password']['second']))) {
-                        if(trim($params['password']['first']) == trim($params['password']['second'])){
+                    isset($params['password']['first']) 
+                    && !empty(trim($params['password']['first'])) 
+                    && isset($params['password']['second'])  
+                    && !empty(trim($params['password']['second']))
+                ) {
+                        if (trim($params['password']['first']) == trim($params['password']['second'])){
                             $encodedPassword = $passwordEncoder->encodePassword($user, $params['password']['first']);
                             $user->setPassword($encodedPassword);
                         } else {
                             return new JsonResponse([
                                 'success' => false, 
                                 'message' => 'Both password does not match together.', 
-                            ],404);
+                            ], 404);
                         }
                 }
                 
@@ -193,13 +219,12 @@ class Customers extends AbstractController
                 $userInstance->setIsActive(isset($params['isActive']) ? $params['isActive'] : 0);
                 $userInstance->setIsVerified(0);
                 
-                if(isset($params['contactNumber'])) {
+                if (isset($params['contactNumber'])) {
                     $userInstance->setContactNumber($params['contactNumber']);
                 }
                 
-                if(isset($dataFiles)) {
+                if (isset($dataFiles)) {
                     // Removed profile image from database and path
-                    
                     $fileService = new Fileservice;
                     if ($userInstance->getProfileImagePath()) {
                         $fileService->remove($this->getParameter('kernel.project_dir').'/public'.$userInstance->getProfileImagePath());
@@ -214,7 +239,6 @@ class Customers extends AbstractController
                 $em->persist($userInstance);
                 $em->flush();
                 
-
                 $user->addUserInstance($userInstance);
                 $em->persist($user);
                 $em->flush();
@@ -238,10 +262,10 @@ class Customers extends AbstractController
         return new JsonResponse([
             'success' => false, 
             'message' => "Invalid credentials provided."
-        ],404);
+        ], 404);
     }
 
-    public function deleteCustomerRecored(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
+    public function deleteCustomerRecord(Request $request, $customerId, UserService $userService, EventDispatcherInterface $eventDispatcher)
     {
         $em = $this->getDoctrine()->getManager();
         $user = $em->getRepository(User::class)->findOneBy(['id' => $customerId]);
@@ -259,7 +283,7 @@ class Customers extends AbstractController
             return new JsonResponse([
                 'success' => false, 
                 'message' => "Authorization failed."
-            ],404);
+            ], 404);
         }
 
         $userService->removeCustomer($user);

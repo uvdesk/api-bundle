@@ -26,7 +26,7 @@ class Team extends AbstractController
         }
 
         return new JsonResponse([
-            'success' => true, 
+            'success'    => true, 
             'collection' => $teamCollection
         ]);
     }
@@ -43,53 +43,69 @@ class Team extends AbstractController
         }
 
         $teamDetails = [
-            'id' => $team->getId(),
-            'name' => $team->getName(),
+            'id'          => $team->getId(),
+            'name'        => $team->getName(),
             'description' => $team->getDescription(),
-            'isActive' => $team->getIsActive() 
+            'isActive'    => $team->getIsActive() 
         ];
 
         return new JsonResponse([
             'success' => true,
-            'team' => $teamDetails,
+            'team'    => $teamDetails,
         ]);
     }
 
-    public function createTeams(Request $request)
+    public function createTeams(Request $request, ContainerInterface $container)
     {
+        $params = $request->request->all()? : json_decode($request->getContent(),true);
+        
+        foreach ($params as $key => $value) {
+            if (!in_array($key, ['name', 'description','isActive','users','tempUsers','tempGroups','groups'])) {
+                unset($params[$key]);
+            }
+        }
+        
+        if (empty($params['name']) || empty($params['description']) || empty($params['users']) || empty($params['groups'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: name,description,groups and users.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
+        
         $supportTeam = new SupportTeam();
-        $allDetails = $request->request->all();
         $em = $this->getDoctrine()->getManager();
 
         $request->request->set('users', explode(',', $request->request->get('tempUsers')));
         $request->request->set('groups', explode(',', $request->request->get('tempGroups')));
+        
         $oldUsers = ($usersList = $supportTeam->getUsers()) ? $usersList->toArray() : $usersList;
         $oldGroups = ($grpList =  $supportTeam->getSupportGroups()) ? $grpList->toArray() : $grpList;
 
-        $supportTeam->setName($allDetails['name']);
-        $supportTeam->setDescription($allDetails['description']);
-        $supportTeam->setIsActive((bool) isset($allDetails['isActive']));
+        $supportTeam->setName($params['name']);
+        $supportTeam->setDescription($params['description']);
+        $supportTeam->setIsActive((bool) isset($params['isActive']));
         $em->persist($supportTeam);
 
-        $usersList = (!empty($allDetails['users']))? $allDetails['users'] : [];
-        $usersGroup  = (!empty($allDetails['groups']))? $allDetails['groups'] : [];
+        $usersList = (!empty($params['users']))? $params['users'] : [];
+        $usersGroup  = (!empty($params['groups']))? $params['groups'] : [];
 
         if (!empty($usersList)) {
             $usersList = array_map(function ($user) { return 'user.id = ' . $user; }, $usersList);
-            
+
             $userList = $em->createQueryBuilder()->select('user')
-            ->from(User::class, 'user')
-            ->where(implode(' OR ', $usersList))
-            ->getQuery()->getResult();
+                ->from(User::class, 'user')
+                ->where(implode(' OR ', $usersList))
+                ->getQuery()->getResult()
+            ;
         }
         
         if (!empty($usersGroup)) {
             $usersGroup = array_map(function ($group) { return 'p.id = ' . $group; }, $usersGroup);
 
             $userGroup = $em->createQueryBuilder('p')->select('p')
-            ->from(SupportGroup::class, 'p')
-            ->where(implode(' OR ', $usersGroup))
-            ->getQuery()->getResult();
+                ->from(SupportGroup::class, 'p')
+                ->where(implode(' OR ', $usersGroup))
+                ->getQuery()->getResult()
+            ;
         }
         
         foreach ($userList as $user) {
@@ -109,40 +125,56 @@ class Team extends AbstractController
 
         return new JsonResponse([
             'success' => true,
-            'message'=> 'Team information saved successfully.'
+            'message' => 'Team information saved successfully.'
         ]);
     }
 
-    public function updateTeamsDetails(Request $request, $teamId)
+    public function updateTeamsDetails(Request $request, $teamId, ContainerInterface $container)
     {
         $supportTeam = $this->getDoctrine()->getRepository(SupportTeam::class)->findSubGroupById(['id' => $teamId]);
-        $allDetails = $request->request->all();
-        $em = $this->getDoctrine()->getManager();
         
         if (empty($supportTeam)) {
             return new JsonResponse([
                 'success' => false,
-                'message'=> 'Team not found.'
+                'message' => 'Team not found.'
             ],404);
+        }
+        
+        $params = $request->request->all()? : json_decode($request->getContent(), true);
+        $em = $this->getDoctrine()->getManager();
+        
+        foreach($params as $key => $value) {
+            if (!in_array($key, ['name', 'description','isActive','users','tempUsers','tempGroups','groups'])) {
+                unset($params[$key]);
+            }
+        }
+        
+        if (empty($params['name']) || empty($params['description']) || empty($params['users']) || empty($params['groups'])) {
+            $json['error'] = $container->get('translator')->trans('required fields: name,description,groups and users.');
+            
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
         $request->request->set('users', explode(',', $request->request->get('tempUsers')));
         $request->request->set('groups', explode(',', $request->request->get('tempGroups')));
         $oldUsers = ($usersList = $supportTeam->getUsers()) ? $usersList->toArray() : $usersList;
         $oldGroups = ($grpList = $supportTeam->getSupportGroups()) ? $grpList->toArray() : $grpList;
-        $supportTeam->setName($allDetails['name']);
-        $supportTeam->setDescription($allDetails['description']);
-        $supportTeam->setIsActive((bool) isset($allDetails['isActive']));
 
-        $usersList = (!empty($allDetails['users']))? $allDetails['users'] : [];
-        $usersGroup  = (!empty($allDetails['groups']))? $allDetails['groups'] : [];
+        $supportTeam->setName($params['name']);
+        $supportTeam->setDescription($params['description']);
+        $supportTeam->setIsActive((bool) isset($params['isActive']));
+
+        $usersList = (!empty($params['users']))? $params['users'] : [];
+        $usersGroup  = (!empty($params['groups']))? $params['groups'] : [];
 
         if (!empty($usersList)) {
             $usersList = array_map(function ($user) { return 'p.id = ' . $user; }, $usersList);
+            
             $userList = $em->createQueryBuilder('p')->select('p')
                 ->from(User::class, 'p')
                 ->where(implode(' OR ', $usersList))
-                ->getQuery()->getResult();
+                ->getQuery()->getResult()
+            ;
         }
 
         if (!empty($usersGroup)) {
@@ -151,17 +183,19 @@ class Team extends AbstractController
             $userGroup = $em->createQueryBuilder('p')->select('p')
                 ->from(SupportGroup::class, 'p')
                 ->where(implode(' OR ', $usersGroup))
-                ->getQuery()->getResult();
+                ->getQuery()->getResult()
+            ;
         }
 
         foreach ($userList as $user) {
             $userInstance = $user->getAgentInstance();
-            if(!$oldUsers || !in_array($userInstance, $oldUsers)){
+            if (!$oldUsers || !in_array($userInstance, $oldUsers)) {
                 $userInstance->addSupportTeam($supportTeam);
                 $em->persist($userInstance);
-            }elseif($oldUsers && ($key = array_search($userInstance, $oldUsers)) !== false)
+            } elseif ($oldUsers && ($key = array_search($userInstance, $oldUsers)) !== false)
                 unset($oldUsers[$key]);
         }
+
         foreach ($oldUsers as $removeUser) {
             $removeUser->removeSupportTeam($supportTeam);
             $em->persist($removeUser);
@@ -169,11 +203,11 @@ class Team extends AbstractController
 
         // Add Group to team
         foreach ($userGroup as $supportGroup) {
-            if(!$oldGroups || !in_array($supportGroup, $oldGroups)){
+            if (!$oldGroups || !in_array($supportGroup, $oldGroups)) {
                 $supportGroup->addSupportTeam($supportTeam);
                 $em->persist($supportGroup);
 
-            }elseif($oldGroups && ($key = array_search($supportGroup, $oldGroups)) !== false)
+            } elseif ($oldGroups && ($key = array_search($supportGroup, $oldGroups)) !== false)
                 unset($oldGroups[$key]);
         }
 
@@ -187,7 +221,7 @@ class Team extends AbstractController
 
         return new JsonResponse([
             'success' => true,
-            'message'=> 'Team information updated successfully.'
+            'message' => 'Team information updated successfully.'
         ]);
     }
 
@@ -208,7 +242,7 @@ class Team extends AbstractController
 
         return new JsonResponse([
             'success' => true,
-            'message'=> 'Team removed successfully.'
+            'message' => 'Team removed successfully.'
         ]);
     }
 }
