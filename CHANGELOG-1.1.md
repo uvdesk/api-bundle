@@ -3,7 +3,7 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
-* 1.1.3
+* 1.1.3 (2024-12-18)
     * Issue #74 - another error on update customer data.
     * Issue #73 - got error on customer create.
     * Issue #63 - IF space in last when create ticket then showing error.
