@@ -1,0 +1,23 @@
+uvdesk_api_bundle_v1_me_api_routing_resources:
+    resource: "v1/me.yaml"
+
+uvdesk_api_bundle_v1_agent_api_routing_resources:
+    resource: "v1/agents.yaml"
+
+uvdesk_api_bundle_v1_customer_api_routing_resources:
+    resource: "v1/customers.yaml"
+
+uvdesk_api_bundle_v1_support_team_api_routing_resources:
+    resource: "v1/teams.yaml"
+
+uvdesk_api_bundle_v1_support_group_api_routing_resources:
+    resource: "v1/groups.yaml"
+
+uvdesk_api_bundle_v1_ticket_api_routing_resources:
+    resource: "v1/tickets.yaml"
+
+uvdesk_api_bundle_v1_ticket_thread_api_routing_resources:
+    resource: "v1/threads.yaml"
+    
+uvdesk_api_bundle_v1_session_api_routing_resources:
+    resource: "v1/sessions.yaml"

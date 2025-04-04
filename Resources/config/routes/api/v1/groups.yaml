@@ -1,0 +1,25 @@
+# Enter support group api endpoints here ...
+uvdesk_api_bundle_v1.0.0_groups_api_load_groups:
+    path: /groups
+    controller: Webkul\UVDesk\ApiBundle\API\Group::loadGroup
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_groups_api_load_groups_details:
+    path: /groups/{id}
+    controller: Webkul\UVDesk\ApiBundle\API\Group::loadGroupDetails
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_groups_api_create_groups_record:
+    path: /groups/create
+    controller: Webkul\UVDesk\ApiBundle\API\Group::createGroupRecord
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_groups_api_update_groups_record:
+    path: /groups/update/{groupId}
+    controller: Webkul\UVDesk\ApiBundle\API\Group::updateGroupRecord
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_groups_api_delete_groups_details:
+    path: /groups/delete/{groupId}
+    controller: Webkul\UVDesk\ApiBundle\API\Group::deleteGroupRecord
+    methods: [DELETE]

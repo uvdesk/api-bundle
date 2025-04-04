@@ -30,11 +30,11 @@ class ApiSettings extends AbstractController
         if (!empty($user)) {
             $collection = array_map(function ($accessCredential) {
                 return [
-                    'id' => $accessCredential->getId(),
-                    'name' => $accessCredential->getName(),
-                    'token' => $accessCredential->getToken(),
+                    'id'          => $accessCredential->getId(),
+                    'name'        => $accessCredential->getName(),
+                    'token'       => $accessCredential->getToken(),
                     'dateCreated' => $accessCredential->getCreatedOn()->format('(l) F d, Y \a\t H:i:s'),
-                    'isEnabled' => $accessCredential->getIsEnabled(),
+                    'isEnabled'   => $accessCredential->getIsEnabled(),
                 ];
             }, $entityManager->getRepository(ApiAccessCredential::class)->findBy(['user' => $user]));
         }

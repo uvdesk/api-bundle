@@ -16,6 +16,7 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Guard\AbstractGuardAuthenticator;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 class APIGuard extends AbstractGuardAuthenticator
 {
@@ -33,11 +34,12 @@ class APIGuard extends AbstractGuardAuthenticator
     const INVALID_CREDNETIALS = 'CC-002';
     const UNEXPECTED_ERROR = 'CC-005';
 
-    public function __construct(FirewallMap $firewall, ContainerInterface $container, EntityManagerInterface $entityManager)
+    public function __construct(FirewallMap $firewall, ContainerInterface $container, EntityManagerInterface $entityManager, UserPasswordEncoderInterface $encoder)
 	{
         $this->firewall = $firewall;
         $this->container = $container;
         $this->entityManager = $entityManager;
+        $this->encoder = $encoder;
 	}
 
     /**
@@ -53,19 +55,38 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getCredentials(Request $request)
     {
-        if (strpos(strtolower($request->headers->get('Authorization')), 'basic') === 0) {
-            $authorization_key = substr($request->headers->get('Authorization'), 6);
+        $accessToken = null;
+        $authorization = $request->headers->get('Authorization');
 
+        if (!empty($authorization) && strpos(strtolower($authorization), 'basic') === 0) {
+            $accessToken = substr($authorization, 6);
+        } else if (!empty($authorization) && strpos(strtolower($authorization), 'bearer') === 0) {
+            $accessToken = substr($authorization, 7);
+        }
+
+        if (!empty($accessToken)) {
             try {
-                
-                $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($authorization_key);
+                if (in_array($request->attributes->get('_route'), ['uvdesk_api_bundle_sessions_api_v1.0_login_session'])) {
+                    list($email, $password) = explode(':', base64_decode($accessToken));
 
-                return ['email' => $user['email'], 'auth_token' => $authorization_key];
-
-            } catch (\Exception $e) { dump($e->getMessage()); die; }
+                    return [
+                        'email'    => $email, 
+                        'password' => $password, 
+                    ];
+                } else {
+                    $user = $this->entityManager->getRepository(ApiAccessCredential::class)->getUserEmailByAccessToken($accessToken);
+                    
+                    return [
+                        'email'       => $user['email'], 
+                        'accessToken' => $accessToken, 
+                    ];
+                }
+            } catch (\Exception $e) {
+                throw new AuthenticationException("An unexpected error occurred while authenticating credentials: {$e->getMessage()}");
+            }
         }
         
-        return $credentials;
+        return [];
     }
 
     /**
@@ -73,7 +94,7 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function getUser($credentials, UserProviderInterface $provider)
     {
-        return $provider->loadUserByUsername($credentials['email']);
+        return !empty($credentials['email']) ? $provider->loadUserByUsername($credentials['email']) : null;
     }
 
     /**
@@ -81,13 +102,21 @@ class APIGuard extends AbstractGuardAuthenticator
      */
     public function checkCredentials($credentials, UserInterface $user)
     {
-        if (!empty($credentials['auth_token'])) {
+        if (!empty($credentials['password'])) {
+            return $this->encoder->isPasswordValid($user, $credentials['password']);
+        }
+
+        if (!empty($credentials['accessToken'])) {
             $accessCredentials = $this->entityManager->getRepository(ApiAccessCredential::class)->findOneBy([
-                'user' => $user,
-                'token' => $credentials['auth_token'],
+                'user'  => $user,
+                'token' => $credentials['accessToken'],
             ]);
 
-            if (!empty($accessCredentials) && true == $accessCredentials->getIsEnabled() && false == $accessCredentials->getIsExpired()) {
+            if (
+                ! empty($accessCredentials)
+                && true == $accessCredentials->getIsEnabled()
+                && false == $accessCredentials->getIsExpired()
+            ) {
                 return true;
             }
         }
@@ -113,24 +142,45 @@ class APIGuard extends AbstractGuardAuthenticator
         switch ($exception->getMessageKey()) {
             case 'Username could not be found.':
                 $data = [
-                    'status' => false,
-                    'message' => 'No such user found',
+                    'status'     => false,
+                    'message'    => 'No such user found',
                     'error_code' => self::USER_NOT_FOUND,
                 ];
+                
                 break;
             case 'Invalid Credentials.':
                 $data = [
-                    'status' => false,
-                    'message' => 'Invalid credentials provided.',
+                    'status'     => false,
+                    'message'    => 'Invalid credentials provided.',
                     'error_code' => self::INVALID_CREDNETIALS,
                 ];
+
+                break;
+            case 'An authentication exception occurred.':
+                if ($request->attributes->get('_route') == 'uvdesk_api_bundle_sessions_api_v1.0_logout_session'){
+                    $data = [
+                        'status'     => false,
+                        'message'    => 'This Session token has been already expired successfully.',
+                        'error_code' => self::INVALID_CREDNETIALS,
+                    ];
+
+                    return new JsonResponse($data, Response::HTTP_FORBIDDEN);
+                }
+
+                $data = [
+                    'status'     => false,
+                    'message'    => 'This api is disabled from admin end, please check once again.',
+                    'error_code' => self::INVALID_CREDNETIALS,
+                ];
+                
                 break;
             default:
                 $data = [
-                    'status' => false,
-                    'message' => strtr($exception->getMessageKey(), $exception->getMessageData()),
+                    'status'     => false,
+                    'message'    => strtr($exception->getMessageKey(), $exception->getMessageData()),
                     'error_code' => self::UNEXPECTED_ERROR,
                 ];
+
                 break;
         }
 
@@ -140,8 +190,8 @@ class APIGuard extends AbstractGuardAuthenticator
     public function start(Request $request, AuthenticationException $authException = null)
     {
         $data = [
-            'status' => false,
-            'message' => 'Authentication Required',
+            'status'     => false,
+            'message'    => 'Authentication Required',
             'error_code' => self::API_NOT_AUTHENTICATED,
         ];
 

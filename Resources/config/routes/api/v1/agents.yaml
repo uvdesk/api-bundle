@@ -1,0 +1,24 @@
+uvdesk_api_bundle_v1.0.0_agents_api_load_agents:
+    path: /agents
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::loadAgents
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_agents_api_load_agent_details:
+    path: /agents/{id}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::loadAgentDetails
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_agents_api_create_agent:
+    path: /agents/create
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::createAgentRecord
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_agents_api_update_agent:
+    path: /agents/update/{id}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::updateAgentRecord
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_agents_api_delete_agent:
+    path: /agents/delete/{agentId}
+    controller: Webkul\UVDesk\ApiBundle\API\Agents::deleteAgentRecord
+    methods: [DELETE]

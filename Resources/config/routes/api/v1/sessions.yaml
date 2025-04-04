@@ -1,0 +1,9 @@
+uvdesk_api_bundle_sessions_api_v1.0_login_session:
+    path: /session/login
+    controller: Webkul\UVDesk\ApiBundle\API\Sessions::loginSession
+    methods: [POST]
+
+uvdesk_api_bundle_sessions_api_v1.0_logout_session:
+    path: /session/logout
+    controller: Webkul\UVDesk\ApiBundle\API\Sessions::logoutSession
+    methods: [POST]

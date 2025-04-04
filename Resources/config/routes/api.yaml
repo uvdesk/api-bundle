@@ -1,0 +1,7 @@
+uvdesk_api_bundle_v1_api_routing_resources:
+    resource: "api/v1.yaml"
+    prefix:   /v1/
+
+# uvdesk_api_bundle_current_api_routing_resources:
+#     resource: "api/v1.yaml"
+#     prefix:   /

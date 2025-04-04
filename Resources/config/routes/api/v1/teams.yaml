@@ -1,0 +1,25 @@
+# Enter support team api endpoints here ...
+uvdesk_api_bundle_v1.0.0_team_api_load_teams:
+    path: /teams
+    controller: Webkul\UVDesk\ApiBundle\API\Team::loadTeams
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_team_api_load_teams_details:
+    path: /teams/{teamId}
+    controller: Webkul\UVDesk\ApiBundle\API\Team::loadTeamsDetails
+    methods: [GET]
+
+uvdesk_api_bundle_v1.0.0_team_api_create_teams_record:
+    path: /teams/create
+    controller: Webkul\UVDesk\ApiBundle\API\Team::createTeams
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_team_api_update_teams_details:
+    path: /teams/update/{teamId}
+    controller: Webkul\UVDesk\ApiBundle\API\Team::updateTeamsDetails
+    methods: [POST]
+
+uvdesk_api_bundle_v1.0.0_team_api_delete_teams_details:
+    path: /teams/delete/{teamId}
+    controller: Webkul\UVDesk\ApiBundle\API\Team::deleteTeamsDetails
+    methods: [DELETE]
