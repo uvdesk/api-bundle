@@ -174,6 +174,7 @@ class Threads extends AbstractController
                 $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
 
                 $json['success'] = "success', Reply added to ticket successfully..";
+                $json['threadId'] = $thread->getId();
                 
                 return new JsonResponse($json, Response::HTTP_OK);
 

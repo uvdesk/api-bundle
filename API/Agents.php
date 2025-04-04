@@ -83,7 +83,7 @@ class Agents extends AbstractController
         ]);
     }
 
-    public function createAgentRecord(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService)
+    public function createAgentRecord(Request $request, ContainerInterface $container, EntityManagerInterface $entityManager, UserService $userService, EventDispatcherInterface $eventDispatcher)
     {
         $params = $request->request->all()? : json_decode($request->getContent(),true);
         
@@ -190,9 +190,15 @@ class Agents extends AbstractController
         $entityManager->persist($userInstance);
         $entityManager->flush();
 
+        $event = new CoreWorkflowEvents\Agent\Create();
+        $event->setUser($user);
+
+        $eventDispatcher->dispatch($event, 'uvdesk.automation.workflow.execute');
+
         return new JsonResponse([
             'success' => true, 
             'message' => 'Agent added successfully.', 
+            'agentId' => $user->getId(),
         ]);
     }
 

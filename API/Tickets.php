@@ -320,8 +320,16 @@ class Tickets extends AbstractController
                     //
                 }
 
+                $user = $this->getUser();
+                $userService = $container->get('user.service');
+
                 $json['message'] = $container->get('translator')->trans('Success ! Ticket has been created successfully.');
-                $json['ticketId'] = $thread->getTicket()->getId();
+                $json['ticket'] = [
+                    'id'        => $thread->getTicket()->getId(),
+                    'status'    => $thread->getTicket()->getStatus()->getId(),
+                    'createdAt' => $userService->getLocalizedFormattedTime($thread->getTicket()->getCreatedAt(), $user),
+                    'updatedAt' => $userService->getLocalizedFormattedTime($thread->getTicket()->getUpdatedAt(), $user),
+                ];
                 $statusCode = Response::HTTP_OK;
 
             } else {

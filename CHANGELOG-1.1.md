@@ -3,6 +3,12 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
+* 1.1.4
+    Updates:
+    - Agent create event added and returned agent id on response.
+    - On ticket reply returning thread id 
+    - On Ticket creation returning ticket id, status, created time and updated time.
+
 * 1.1.3 (2024-12-18)
     * Issue #74 - another error on update customer data.
     * Issue #73 - got error on customer create.
