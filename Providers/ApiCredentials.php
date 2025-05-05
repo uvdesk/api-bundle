@@ -3,8 +3,6 @@
 namespace Webkul\UVDesk\ApiBundle\Providers;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Bundle\SecurityBundle\Security\FirewallMap;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -12,6 +10,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UsernameNotFoundException;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
 
 class ApiCredentials implements UserProviderInterface
 {

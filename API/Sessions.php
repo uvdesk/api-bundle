@@ -5,10 +5,8 @@ namespace Webkul\UVDesk\ApiBundle\API;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
 use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
 use Webkul\UVDesk\CoreFrameworkBundle\Services\UVDeskService as Uvdesk;
 
@@ -48,8 +46,6 @@ class Sessions extends AbstractController
 
     public function logoutSession(Request $request, EntityManagerInterface $entityManager)
     {
-        $user = $this->getUser();
-
         $accessToken = null;
         $authorization = $request->headers->get('Authorization');
 
@@ -58,7 +54,7 @@ class Sessions extends AbstractController
         } else if (!empty($authorization) && strpos(strtolower($authorization), 'bearer') === 0) {
             $accessToken = substr($authorization, 7);
         }
-        
+
         if (empty($accessToken)) {
             return new JsonResponse([
                 'success' => false, 

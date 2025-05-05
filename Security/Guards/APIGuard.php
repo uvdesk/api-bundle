@@ -2,21 +2,19 @@
 
 namespace Webkul\UVDesk\ApiBundle\Security\Guards;
 
-use Doctrine\ORM\Tools\Setup;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\SecurityBundle\Security\FirewallMap;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Guard\AbstractGuardAuthenticator;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
 
 class APIGuard extends AbstractGuardAuthenticator
 {

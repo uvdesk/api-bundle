@@ -39,7 +39,7 @@ class KernelException
                 break;
             case $exception instanceof AccessDeniedHttpException:
                 $responseContent['status'] = false;
-                
+
                 if (403 === $exception->getStatusCode()) {
                     $responseContent['message'] = 'You\'re not authorized to perform this action.';
                 } else {
@@ -55,7 +55,7 @@ class KernelException
                 $event->setResponse(new JsonResponse($responseContent, Response::HTTP_INTERNAL_SERVER_ERROR));
                 break;
         }
-        
+
         return;
     }
 }

@@ -4,21 +4,20 @@ namespace Webkul\UVDesk\ApiBundle\Controller;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Webkul\UVDesk\ApiBundle\Entity\ApiAccessCredential;
+use Webkul\UVDesk\CoreFrameworkBundle\Utils\TokenGenerator;
 
 class ApiSettings extends AbstractController
 {
     public function loadConfigurations(ContainerInterface $container)
     {
-        if (!$container->get('user.service')->isAccessAuthorized('ROLE_ADMIN')) {
+        if (! $container->get('user.service')->isAccessAuthorized('ROLE_ADMIN')) {
             throw new AccessDeniedException("Insufficient account privileges");
         }
 
@@ -27,7 +26,7 @@ class ApiSettings extends AbstractController
 
     public function loadConfigurationsXHR(Request $request, UserInterface $user, EntityManagerInterface $entityManager)
     {
-        if (!empty($user)) {
+        if (! empty($user)) {
             $collection = array_map(function ($accessCredential) {
                 return [
                     'id'          => $accessCredential->getId(),
@@ -47,7 +46,10 @@ class ApiSettings extends AbstractController
         if ($request->getMethod() == 'POST') {
             $params = $request->request->all();
 
-            if (!empty($params['name']) && !empty($user)) {
+            if (
+                ! empty($params['name'])
+                && ! empty($user)
+            ) {
                 ($accessCredential = new ApiAccessCredential())
                     ->setUser($user)
                     ->setName($params['name'])
@@ -87,7 +89,7 @@ class ApiSettings extends AbstractController
                 $accessCredential
                     ->setIsEnabled(("false" == $params['isEnabled']) ? false : true)
                     ->setIsExpired(("false" == $params['isEnabled']) ? true : false);
-                
+
                 $entityManager->persist($accessCredential);
                 $entityManager->flush();
                 break;

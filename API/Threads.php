@@ -2,21 +2,13 @@
 
 namespace Webkul\UVDesk\ApiBundle\API;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\EventDispatcher\GenericEvent;
-use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\Ticket;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\TicketStatus;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\Attachment;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity as CoreFrameworkBundleEntity;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
 
 class Threads extends AbstractController
@@ -24,28 +16,31 @@ class Threads extends AbstractController
     /** Ticket Reply
      * @param Request $request
      */
-    public function saveThread(Request $request, $ticketid, ContainerInterface $container)
+    public function saveThread(Request $request, $ticketid, ContainerInterface $container, EntityManagerInterface $entityManager)
     {
-        $data = $request->request->all()? : json_decode($request->getContent(),true);
-        $entityManager = $this->getDoctrine()->getManager();
+        $data = $request->request->all() ?: json_decode($request->getContent(), true);
 
-        if (!isset($data['threadType']) || !isset($data['message'])) {
+        if (
+            ! isset($data['threadType'])
+            || ! isset($data['message'])
+            || ! isset($data['actAsType'])
+        ) {
             $json['error'] = 'missing fields';
-            $json['description'] = 'required: threadType: reply|forward|note , message';
-            
+            $json['description'] = 'required: (threadType: reply|forward|note) , message, actAsType (customer|agent)';
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
-        $ticket = $this->getDoctrine()->getRepository(Ticket::class)->findOneById($ticketid);
+        $ticket = $entityManager->getRepository(CoreFrameworkBundleEntity\Ticket::class)->findOneById($ticketid);
 
         // Check for empty ticket
         if (empty($ticket)) {
             $json['error'] = "Error! No such ticket with ticket id exist";
-            
+
             return new JsonResponse($json, Response::HTTP_NOT_FOUND);
         } else if ('POST' != $request->getMethod()) {
             $json['error'] = "Error! invalid request method";
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
@@ -56,31 +51,18 @@ class Threads extends AbstractController
 
         if (null == $parsedMessage) {
             $json['error'] = "Warning ! Reply content cannot be left blank.";
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
-        if (array_key_exists('actAsType', $data) && isset($data['actAsEmail'])) {
-            $actAsType = strtolower($data['actAsType']);
-            $actAsEmail = $data['actAsEmail'];
+        $actAsType = strtolower($data['actAsType']);
+        $user = $entityManager->getRepository(CoreFrameworkBundleEntity\User::class)->findOneByEmail($data['actAsEmail']);
 
-            if ($actAsType == 'customer') {
-                $user = $this->getDoctrine()->getRepository(User::class)->findOneByEmail($data['actAsEmail']);
-            } else if ($actAsType == 'agent' ) {
-                $user = $this->getDoctrine()->getRepository(User::class)->findOneByEmail($data['actAsEmail']);
-            } else {
-                $json['error'] = 'Error! invalid actAs details.';
-                $json['description'] = 'possible values actAsType: customer,agent. Also provide actAsEmail parameter with actAsType agent.';
-               
-                return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
-            }
+        if (! $user) {
+            $json['error'] = 'Error! no user found.';
 
-            if (! $user) {
-                $json['error'] = 'Error! invalid actAs details.';
-               
-                return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
-            }
-        } 
+            return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
+        }
 
         if ($actAsType == 'agent') {
             $data['user'] = isset($user) && $user ? $user : $container->get('user.service')->getCurrentUser();
@@ -89,6 +71,7 @@ class Threads extends AbstractController
         }
 
         $attachments = $request->files->get('attachments');
+
         if (! empty($attachments)) {
             $attachments = is_array($attachments) ? $attachments : [$attachments];
         }
@@ -103,10 +86,10 @@ class Threads extends AbstractController
         ];
 
         if (! empty($data['status'])) {
-            $ticketStatus =  $this->getDoctrine()->getRepository(TicketStatus::class)->findOneByCode($data['status']);
+            $ticketStatus =  $entityManager->getRepository(CoreFrameworkBundleEntity\TicketStatus::class)->findOneByCode($data['status']);
             $ticket->setStatus($ticketStatus);
         }
-        
+
         if (isset($data['to'])) {
             $threadDetails['to'] = $data['to'];
         }
@@ -123,23 +106,31 @@ class Threads extends AbstractController
             $threadDetails['bcc'] = $data['bcc'];
         }
 
-        $customer = $this->getDoctrine()->getRepository(UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4 ));
-        
-        if (! empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'note') {
+        $customer = $entityManager->getRepository(CoreFrameworkBundleEntity\UserInstance::class)->findOneBy(array('user' => $user->getId(), 'supportRole' => 4));
+
+        if (
+            ! empty($customer)
+            && $threadDetails['createdBy'] == 'customer'
+            && $threadDetails['threadType'] == 'note'
+        ) {
             $json['success'] = "success', Can't add note user account.";
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
-        if (! empty($customer) && $threadDetails['createdBy'] == 'customer' && $threadDetails['threadType'] == 'forward') {
+        if (
+            ! empty($customer)
+            && $threadDetails['createdBy'] == 'customer'
+            && $threadDetails['threadType'] == 'forward'
+        ) {
             $json['success'] = "success', Can't forward ticket to user account.";
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
         // Create Thread
         $thread = $container->get('ticket.service')->createThread($ticket, $threadDetails);
-        
+
         // Check for thread types
         switch ($thread->getThreadType()) {
             case 'note':
@@ -150,9 +141,8 @@ class Threads extends AbstractController
                 ;
 
                 $container->get('event_dispatcher')->dispatch($event, 'uvdesk.automation.workflow.execute');
-
                 $json['success'] = "success', Note added to ticket successfully.";
-                
+
                 return new JsonResponse($json, Response::HTTP_OK);
 
                 break;
@@ -175,7 +165,8 @@ class Threads extends AbstractController
 
                 $json['success'] = "success', Reply added to ticket successfully..";
                 $json['threadId'] = $thread->getId();
-                
+                $json['thread'] = $threadDetails;
+
                 return new JsonResponse($json, Response::HTTP_OK);
 
                 break;
@@ -188,21 +179,21 @@ class Threads extends AbstractController
                 }
 
                 // Prepare attachments
-                $attachments = $entityManager->getRepository(Attachment::class)->findByThread($thread);
+                $attachments = $entityManager->getRepository(CoreFrameworkBundleEntity\Attachment::class)->findByThread($thread);
 
                 $projectDir = $container->get('kernel')->getProjectDir();
-                $attachments = array_map(function($attachment) use ($projectDir) {
+                $attachments = array_map(function ($attachment) use ($projectDir) {
                     return str_replace('//', '/', $projectDir . "/public" . $attachment->getPath());
                 }, $attachments);
 
                 // Forward thread to users
                 try {
                     $messageId = $container->get('email.service')->sendMail($params['subject'] ?? ("Forward: " . $ticket->getSubject()), $thread->getMessage(), $thread->getReplyTo(), $headers, $ticket->getMailboxEmail(), $attachments ?? [], $thread->getCc() ?: [], $thread->getBcc() ?: []);
-    
+
                     if (! empty($messageId)) {
                         $thread->setMessageId($messageId);
-    
-                        $entityManager->persist($createdThread);
+
+                        $entityManager->persist($thread);
                         $entityManager->flush();
                     }
                 } catch (\Exception $e) {
@@ -211,7 +202,7 @@ class Threads extends AbstractController
                 }
 
                 $json['success'] = "success', Reply added to the ticket and forwarded successfully.";
-                
+
                 return new JsonResponse($json, Response::HTTP_OK);
 
                 break;

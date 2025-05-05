@@ -1,104 +1,107 @@
 <?php
 
 namespace Webkul\UVDesk\ApiBundle\API;
+
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportGroup;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\SupportTeam;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\User;
-use Webkul\UVDesk\CoreFrameworkBundle\Entity\UserInstance;
+use Webkul\UVDesk\CoreFrameworkBundle\Entity as CoreFrameworkBundleEntity;
 
 class Group extends AbstractController
 {
-    public function loadGroup(Request $request, ContainerInterface $container)
+    public function loadGroup(Request $request, ContainerInterface $container, EntityManagerInterface $em)
     {
-        $groupCollection = $this->getDoctrine()->getRepository(SupportGroup::class)->getAllGroups($request->query, $container);
+        $groupCollection = $em->getRepository(CoreFrameworkBundleEntity\SupportGroup::class)->getAllGroups($request->query, $container);
+
         if (empty($groupCollection)) {
             return new JsonResponse([
-                'success' => false, 
-                'message' => " No record found.", 
+                'success' => false,
+                'message' => " No record found.",
             ], 404);
         }
 
         return new JsonResponse([
-            'success'    => true, 
-            'collection' => !empty($groupCollection) ? $groupCollection : [], 
+            'success'    => true,
+            'collection' => !empty($groupCollection) ? $groupCollection : [],
         ]);
     }
 
-    public function loadGroupDetails(Request $request, $id)
+    public function loadGroupDetails(Request $request, $id, EntityManagerInterface $em)
     {
-        $group = $this->getDoctrine()->getRepository(SupportGroup::class)->findOneById($id);
+        $group = $em->getRepository(CoreFrameworkBundleEntity\SupportGroup::class)->findOneById($id);
 
         if (empty($group)) {
             return new JsonResponse([
-                'success' => false, 
-                'message' => " No group details were found with id '$id'.", 
+                'success' => false,
+                'message' => " No group details were found with id '$id'.",
             ], 404);
         }
-        
+
         $groupDetails = [
             'id'          => $group->getId(),
             'name'        => $group->getName(),
             'description' => $group->getDescription(),
-            'isActive'    => $group->getIsActive() 
+            'isActive'    => $group->getIsActive()
         ];
 
         return new JsonResponse([
-            'success' => true, 
-            'group'   => $groupDetails, 
+            'success' => true,
+            'group'   => $groupDetails,
         ]);
     }
 
-    public function createGroupRecord(Request $request, ContainerInterface $container)
+    public function createGroupRecord(Request $request, ContainerInterface $container, EntityManagerInterface $em)
     {
         $params = $request->request->all()? : json_decode($request->getContent(),true);
-        
+
         foreach ($params as $key => $value) {
-            if (!in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
+            if (! in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
                 unset($params[$key]);
             }
         }
-        
-        if (empty($params['name']) || empty($params['description'])) {
+
+        if (
+            empty($params['name'])
+            || empty($params['description'])
+        ) {
             $json['error'] = $container->get('translator')->trans('required fields: name and description.');
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
-        
-        $group = new SupportGroup;
-        $em = $this->getDoctrine()->getManager();
+
+        $group = new CoreFrameworkBundleEntity\SupportGroup;
+
         $group->setName($params['name']);
         $group->setDescription($params['description']);
         $group->setIsActive((bool) isset($params['isActive']));
+
         $usersList = (!empty($params['users'])) ? $params['users'] : [];
         $userTeam  = (!empty($params['supportTeams'])) ? $params['supportTeams'] : [];
-        
-        if (!empty($usersList)) {
+
+        if (! empty($usersList)) {
             $usersList = array_map(function ($user) { return 'user.id = ' . $user; }, $usersList);
-            
+
             $userList = $em->createQueryBuilder()->select('user')
-                ->from(User::class, 'user')
+                ->from(CoreFrameworkBundleEntity\User::class, 'user')
                 ->where(implode(' OR ', $usersList))
                 ->getQuery()->getResult()
             ;
         }
-        
-        if (!empty($userTeam)) {
+
+        if (! empty($userTeam)) {
             $userTeam = array_map(function ($team) { return 'team.id = ' . $team; }, $userTeam);
 
             $userTeam = $em->createQueryBuilder()->select('team')
-                ->from(SupportTeam::class, 'team')
+                ->from(CoreFrameworkBundleEntity\SupportTeam::class, 'team')
                 ->where(implode(' OR ', $userTeam))
                 ->getQuery()->getResult()
             ;
         }
 
-        if (!empty($userList)) {
+        if (! empty($userList)) {
             foreach ($userList as $user) {
                 $userInstance = $user->getAgentInstance();
 
@@ -116,37 +119,41 @@ class Group extends AbstractController
         $em->flush();
 
         return new JsonResponse([
-            'success' => true, 
-            'group'   => 'Group information saved successfully.' 
+            'success' => true,
+            'message' => 'Group information saved successfully.',
+            'group'   => $group
         ]);
     }
-    
-    public function updateGroupRecord(Request $request, $groupId, ContainerInterface $container)
+
+    public function updateGroupRecord(Request $request, $groupId, ContainerInterface $container, EntityManagerInterface $em)
     {
         $params = $request->request->all()? : json_decode($request->getContent(),true);
-        
+
         foreach ($params as $key => $value) {
-            if(!in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
+            if(! in_array($key, ['name', 'description','isActive','users','supportTeams'])) {
                 unset($params[$key]);
             }
         }
-        
-        if (empty($params['name']) || empty($params['description'])) {
+
+        if (
+            empty($params['name'])
+            || empty($params['description'])
+        ) {
             $json['error'] = $container->get('translator')->trans('required fields: name and description.');
-            
+
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
 
-        $group = new SupportGroup;
-        $em = $this->getDoctrine()->getManager();
+        $group = new CoreFrameworkBundleEntity\SupportGroup;
 
         if ($groupId) {
-            $group = $this->getDoctrine()->getRepository(SupportGroup::class)->findGroupById(['id' => $groupId]);
+            $group = $em->getRepository(CoreFrameworkBundleEntity\SupportGroup::class)->findGroupById(['id' => $groupId]);
+
             if (empty($group)){
                 return new JsonResponse([
-                    'success' => true, 
-                    'group'   => 'Support group not found.' 
-                ]);  
+                    'success' => true,
+                    'group'   => 'Support group not found.'
+                ]);
             }
 
             $request->request->replace($params);
@@ -154,40 +161,40 @@ class Group extends AbstractController
             if ($params('tempUsers')) {
                 $request->request->set('users', explode(',', $params('tempUsers')));
             }
-            
+
             if ($params('tempTeams')) {
                 $request->request->set('supportTeams', explode(',', $params('tempTeams')));
             }
-            
+
             $oldUsers = ($usersList = $group->getUsers()) ? $usersList->toArray() : [];
             $oldTeam  = ($teamList = $group->getSupportTeams()) ? $teamList->toArray() : [];
-            
+
             $group->setName($params['name']);
             $group->setDescription($params['description']);
             $group->setIsActive((bool) isset($params['isActive']));
-            
+
             $usersList = (!empty($params['users']))? $params['users'] : [];
             $userTeam  = (!empty($params['supportTeams']))? $params['supportTeams'] : [];
 
             if (!empty($usersList)) {
                 $usersList = array_map(function ($user) { return 'user.id = ' . $user; }, $usersList);
                 $userList = $em->createQueryBuilder()->select('user')
-                    ->from(User::class, 'user')
+                    ->from(CoreFrameworkBundleEntity\User::class, 'user')
                     ->where(implode(' OR ', $usersList))
                     ->getQuery()->getResult()
                 ;
             }
-            
+
             if (!empty($userTeam)) {
                 $userTeam = array_map(function ($team) { return 'team.id = ' . $team; }, $userTeam);
-                
+
                 $userTeam = $em->createQueryBuilder()->select('team')
-                    ->from(SupportTeam::class, 'team')
+                    ->from(CoreFrameworkBundleEntity\SupportTeam::class, 'team')
                     ->where(implode(' OR ', $userTeam))
                     ->getQuery()->getResult()
                 ;
             }
-            
+
             if (!empty($userList)) {
                 // Add Users to Group
                 foreach ($userList as $user) {
@@ -204,7 +211,6 @@ class Group extends AbstractController
                     $removeUser->removeSupportGroup($group);
                     $em->persist($removeUser);
                 }
-                
             } else {
                 foreach ($oldUsers as $removeUser) {
                     $removeUser->removeSupportGroup($group);
@@ -225,7 +231,6 @@ class Group extends AbstractController
                     $group->removeSupportTeam($removeTeam);
                     $em->persist($group);
                 }
-
             } else {
                 foreach ($oldTeam as $removeTeam) {
                     $group->removeSupportTeam($removeTeam);
@@ -235,19 +240,26 @@ class Group extends AbstractController
 
             $em->persist($group);
             $em->flush();
-            
+
             return new JsonResponse([
-                'success' => true, 
-                'group'   => 'Group information update successfully.' 
-            ]);   
+                'success' => true,
+                'message' => 'Group information update successfully.',
+                'group'   => $group
+            ]);
         }
     }
 
-    public function deleteGroupRecord(Request $request, $groupId)
+    public function deleteGroupRecord(EntityManagerInterface $entityManager, $groupId)
     {
-        $entityManager = $this->getDoctrine()->getManager();
-        $supportGroup = $entityManager->getRepository(SupportGroup::class)->findOneById($groupId);
+        if (empty($groupId)) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Group ID is required.',
+            ], 400);
+        }
         
+        $supportGroup = $entityManager->getRepository(CoreFrameworkBundleEntity\SupportGroup::class)->findOneById($groupId);
+
         if (empty($supportGroup)) {
             return new JsonResponse([
                 'success' => false,
@@ -257,10 +269,11 @@ class Group extends AbstractController
 
         $entityManager->remove($supportGroup);
         $entityManager->flush();
-        
+
         return new JsonResponse([
-            'success' => true, 
-            'group'   => 'Support Group removed successfully.'
+            'success' => true,
+            'message' => 'Support Group removed successfully.',
+            'group'   => $supportGroup
         ]);
     }
 
