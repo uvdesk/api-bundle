@@ -110,7 +110,7 @@ More examples of ticket related apis can be found over [here][6].
                     "id": 1,
                     "code": "open",
                     "description": "Open",
-                    "colorCode": "#7E91F0",
+                    "colorCode": "#0056fc",
                     "sortOrder": 1
                 },
                 "group": null,
@@ -194,7 +194,7 @@ More examples of ticket related apis can be found over [here][6].
                 "id": 1,
                 "code": "open",
                 "description": "Open",
-                "colorCode": "#7E91F0",
+                "colorCode": "#0056fc",
                 "sortOrder": 1
             },
             {
