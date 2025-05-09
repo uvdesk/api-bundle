@@ -3,19 +3,17 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
-* 1.1.5 (2025-05-05)
-    Updates:
-    - On agent create or update returned the agent data in json response
-    - On customer create or update returned the customer data in json response
-    - On group create or update returned the group data in json response
-    - On team create or update returned the team data in json response
-
-    * Code Refracting
-* 1.1.4 (2025-04-12)
+* 1.1.4
     Updates:
     - Agent create event added and returned agent id on response.
-    - On ticket reply returning thread id 
-    - On Ticket creation returning ticket id, status, created time and updated time.
+    - On ticket reply returning thread details in json response.
+    - On ticket create returned ticket data in json response.
+    - On agent create or update returned the agent data in json response.
+    - On customer create or update returned the customer data in json response.
+    - On group create or update returned the group data in json response.
+    - On team create or update returned the team data in json response.
+
+    * Code Refractoring
 
 * 1.1.3 (2024-12-18)
     * Issue #74 - another error on update customer data.
