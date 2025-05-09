@@ -2,12 +2,12 @@
     <img src="https://s3-ap-southeast-1.amazonaws.com/cdn.uvdesk.com/uvdesk/bundles/webkuldefault/images/uvdesk-wide.svg">
 </a></p>
 
-The API bundle allows integration developers to utilize uvdesk's REST api to easily communicate with their community helpdesk system.
+The API Bundle empowers integration developers to seamlessly interact with the UVDesk Community Helpdesk system using its robust RESTful API. It provides a comprehensive set of endpoints that allow external applications to perform key operations—such as creating, updating, and retrieving tickets, managing customers and agents and smooth integration with third-party platforms and custom systems.
 
 Installation
 --------------
 
-This bundle can be easily integrated into any symfony application (though it is recommended that you're using [Symfony 4][3] as things have changed drastically with the newer Symfony versions). Before continuing, make sure that you're using PHP 7.2 or higher and have [Composer][5] installed. 
+This bundle can be easily integrated into any symfony application (though it is recommended that you're using [Symfony 4][3] as things have changed drastically with the newer Symfony versions). Before continuing, make sure that you're using PHP 8.1 or higher and have [Composer][5] installed. 
 
 To require the api bundle into your symfony project, simply run the following from your project root:
 
