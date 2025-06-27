@@ -163,6 +163,11 @@ class Tickets extends AbstractController
 
     /**
      * Create support tickets.
+     * customFields data passed like :
+     * {
+     *   customFields[key] : value,
+     *   customFields[key] : value,
+     * }
      *
      * @param Request $request
      * @return void
@@ -286,6 +291,12 @@ class Tickets extends AbstractController
                 }
 
                 $thread = $container->get('ticket.service')->createTicketBase($ticketData);
+                $customFields = $request->request->get('customFields');
+
+                if ($customFields) {
+                    $container->get('ticket.service')->addTicketCustomFields($thread, $customFields, $customFields);
+                }
+
                 // Trigger ticket created event
                 try {
                     $event = new CoreWorkflowEvents\Ticket\Create();
@@ -473,6 +484,13 @@ class Tickets extends AbstractController
         $ticketDetails['customer'] = $customerDetails;
         $ticketDetails['totalThreads'] = count($threads);
 
+        $customFields = [];
+
+        if ($userService->isFileExists('apps/uvdesk/custom-fields')) {
+            $customFieldsService = $this->container->get('uvdesk_package_custom_fields.service');
+            $customFields =  $customFieldsService->getTicketCustomFieldDetails($ticket->getId());
+        }
+
         return new JsonResponse([
             'ticket'                => $ticketDetails,
             'totalCustomerTickets'  => ($ticketRepository->countCustomerTotalTickets($customer, $container)),
@@ -480,7 +498,8 @@ class Tickets extends AbstractController
             'supportTeams'          => $userRepository->getSupportTeams(),
             'ticketStatuses'        => $status,
             'ticketPriorities'      => $priority,
-            'ticketTypes'           => $type
+            'ticketTypes'           => $type,
+            'customFields'          => $customFields
         ]);
     }
 

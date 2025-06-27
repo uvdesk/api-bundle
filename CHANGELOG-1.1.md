@@ -3,6 +3,10 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
+* 1.1.5
+    Updates:
+    - Added custom field support in ticket create and view request
+
 * 1.1.4
     Updates:
     - Agent create event added and returned agent id on response.
