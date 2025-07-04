@@ -86,7 +86,7 @@ class Threads extends AbstractController
         $user = $entityManager->getRepository(CoreFrameworkBundleEntity\User::class)->findOneByEmail($data['actAsEmail']);
        
         if (! $user) {
-            $json['error'] = 'Error! no user found.';
+            $json['error'] = 'Error!! no user found.';
 
             return new JsonResponse($json, Response::HTTP_BAD_REQUEST);
         }
