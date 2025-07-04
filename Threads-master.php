@@ -10,20 +10,12 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Webkul\UVDesk\CoreFrameworkBundle\Entity as CoreFrameworkBundleEntity;
 use Webkul\UVDesk\CoreFrameworkBundle\Workflow\Events as CoreWorkflowEvents;
-use Webkul\UVDesk\CoreFrameworkBundle\Services\TicketService;
 
 class Threads extends AbstractController
 {
-
-    private $ticketService;
     /** Ticket Reply
      * @param Request $request
      */
-
-    public function __construct(TicketService $ticketService)
-    {
-        $this->ticketService = $ticketService;
-    }
     public function saveThread(Request $request, $ticketid, ContainerInterface $container, EntityManagerInterface $entityManager)
     {
         $data = $request->request->all() ?: json_decode($request->getContent(), true);
@@ -40,25 +32,6 @@ class Threads extends AbstractController
         }
 
         $ticket = $entityManager->getRepository(CoreFrameworkBundleEntity\Ticket::class)->findOneById($ticketid);
-
-        // dd($ticket); //checking role based
-        $actAsEmail = $data['actAsEmail'] ?? null;
-
-        $user = $entityManager->getRepository(CoreFrameworkBundleEntity\User::class)->findOneBy(['email' => $actAsEmail]);
-
-        if (!$user || false == $this->ticketService->isTicketAccessGranted($ticket, $user)) {
-            return new JsonResponse([
-                'error' => 'Access Denied',
-                'description' => 'User does not have permission on this ticket.'
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        $collaboratorEmails = [];
-
-        foreach ($ticket->getCollaborators() as $collaborator) {
-
-            $collaboratorEmails[] = strtolower(trim($collaborator->getEmail()));
-        }
 
         // Check for empty ticket
         if (empty($ticket)) {
@@ -84,7 +57,7 @@ class Threads extends AbstractController
 
         $actAsType = strtolower($data['actAsType']);
         $user = $entityManager->getRepository(CoreFrameworkBundleEntity\User::class)->findOneByEmail($data['actAsEmail']);
-       
+
         if (! $user) {
             $json['error'] = 'Error! no user found.';
 
@@ -92,27 +65,10 @@ class Threads extends AbstractController
         }
 
         if ($actAsType == 'agent') {
-
             $data['user'] = isset($user) && $user ? $user : $container->get('user.service')->getCurrentUser();
-            //  dd($data['user']);
-
         } else {
-            $userEmail = strtolower($user->getEmail());;
-            $customerEmail = $ticket->getCustomer()->getEmail();
-
-            if (
-                strtolower($userEmail) === strtolower($customerEmail) ||
-                in_array(strtolower($userEmail), array_map('strtolower', $collaboratorEmails))
-            ) {
-                $data['user'] = $user;
-            } else {
-
-                return new JsonResponse([
-                    'error' => 'Access denied: User is not allowed to act on this ticket.'
-                ], Response::HTTP_FORBIDDEN);
-            }
+            $data['user'] = $user;
         }
-
 
         $attachments = $request->files->get('attachments');
 

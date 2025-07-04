@@ -1,0 +1,100 @@
+[33m29f8ace[m[33m ([m[1;36mHEAD -> [m[1;32mfix/issue1.1.1[m[33m, [m[1;31morigin/fix/issue1.1.1[m[33m, [m[1;32mmaster[m[33m)[m Merge branch 'master' of https://github.com/uvdesk/api-bundle
+[33m3a27476[m readme.md file updates
+[33m8cead9b[m update default color
+[33m3d444c5[m updated changelog
+[33m7e0a35a[m updated code apis json response and refracted code
+[33m9a4be5d[m Updated API Icon on dashboard and for search
+[33md0714d2[m Agent create event added and returned agent id on response, on reply returning thread id and on ticket creation returning ticket id, status. created time and updated times.
+[33mf2d2b55[m Updating master branch with latest updates
+[33m0f062d2[m Updated license and support emails
+[33m6ef4f4c[m Resolve merge conflicts while merging latest changes from branch 1.2
+[33maa0f36d[m Remove dependency on the uvdesk/composer-plugin composer plugin package in support for symfony/flex
+[33m82137ab[m Merge branch '1.1'
+[33mf3c560f[m[33m ([m[1;33mtag: v1.1.1[m[33m)[m Update CHANGELOG-1.1.md
+[33m241da71[m Merge branch '1.1'
+[33m500a6ce[m Entity references update & misc. code refactoring
+[33m44a244a[m Merge branch '1.1'
+[33mf20b214[m Update entity references
+[33mff28657[m Set branch alias to development branch 1.1
+[33mb98329a[m Merge branch '1.1'
+[33m2287d10[m[33m ([m[1;33mtag: v1.1.0[m[33m)[m Add CHANGELOG-1.1.md
+[33m3729518[m Remove branch alias defined in development branch 1.1
+[33ma5bcb87[m Merge branch '1.0' into 1.1
+[33md31464f[m[33m ([m[1;31morigin/1.0[m[33m)[m Update CHANGELOG-1.0.md
+[33m1501a07[m Set composer minimum-stability to stable
+[33m0d3453d[m Merge pull request #29 from uvdesk/1.1
+[33m57c55c9[m ticket Serialize
+[33m049c31d[m Merge pull request #28 from uvdesk/1.1
+[33m6ea8aee[m collaborartor remove function updated
+[33m4ffbd22[m Merge pull request #27 from uvdesk/1.1
+[33m5da60e0[m collaborartor remove function updated
+[33m9f03ace[m Merge pull request #26 from uvdesk/1.1
+[33m35eff8c[m updates
+[33m55a52ac[m Merge pull request #25 from uvdesk/1.1
+[33maf6cc2b[m updates
+[33m34c9262[m Merge pull request #24 from uvdesk/1.1
+[33m7a8891e[m updates
+[33mfb99c65[m Merge pull request #23 from uvdesk/1.1
+[33me6b4872[m compatibility updates
+[33m4805a66[m compatibility updates
+[33m667a618[m Merge pull request #22 from uvdesk/1.1
+[33m5891f1d[m updates classes as per symfony 5
+[33m9dca2bb[m Merge branch 1.1
+[33m0fe5293[m Init. branch 1.1 - symfony 5, php8 compatibility updates
+[33m89f2604[m Merge branch '1.0'
+[33m6a6994d[m update
+[33ma0e9f85[m Merge branch '1.0'
+[33m537c563[m actAS issue for agent updated
+[33m1873be4[m Merge branch '1.0'
+[33m4bb2e2b[m customer ticket fetch issue resolved
+[33m729bafb[m Merge branch '1.0'
+[33m2edd02c[m Ticket type added for the create ticket
+[33m48642a5[m Merge branch '1.0'
+[33m1a1a816[m attachment download issue fixed
+[33m73a0487[m Merge branch '1.0'
+[33m3997c3c[m attachment download issue fixed
+[33m9d2fd12[m Merge branch '1.0'
+[33mc513d5c[m attachment issue fixed for single and multiple attachment
+[33m201c101[m Merge branch '1.0'
+[33mbdf76b8[m spelling correction
+[33me22e7ef[m Merge branch '1.0'
+[33ma29ce4c[m attachment issue fixed for ticket create and ticket reply
+[33ma35750a[m Merge branch '1.0'
+[33m19f5642[m attachment issue fixed for create ticket and reply on ticket
+[33mee90d35[m Merge branch '1.0'
+[33mc4f8840[m ticket reply fix for customer when adding reply to ticket
+[33m5debe56[m Merge branch '1.0'
+[33mc146ddd[m updated changelog.md
+[33m86f3d14[m Merge branch '1.0'
+[33m79f9189[m API updates
+[33m6cc9ea5[m Merge branch '1.0'
+[33m67840ca[m ticket type update
+[33m5207f49[m Merge branch '1.0'
+[33m36d7dde[m Readme.md update
+[33me355c43[m Merge branch '1.0'
+[33mc4b73fe[m New API Updates
+[33me097c2c[m Merge branch '1.0'
+[33m6628f95[m New API's Added
+[33m54d5720[m Merge branch '1.0'
+[33mf74a248[m Readme.md update and Issue Template added
+[33m4500814[m Merge branch '1.0'
+[33mbc56d4b[m updates
+[33m709103d[m Ticket related API updates
+[33m0b5e2d1[m Merge branch '1.0'
+[33md8a7f1f[m Ticket create Api and Ticket view API
+[33m4a363ff[m Merge branch '1.0'
+[33m2ca0608[m update readme.md
+[33m0e07cc5[m Merge branch '1.0'
+[33m6b2dc6b[m[33m ([m[1;33mtag: v1.0.0[m[33m)[m update
+[33mff7fa72[m Merge branch '1.0'
+[33m8d64f4d[m changelog.md updated
+[33m405adaa[m Merge branch '1.0'
+[33mdcf4fbb[m changelog.md updated
+[33mc20b293[m Merge branch '1.0'
+[33me83defd[m readme.md updated
+[33mf8dcadb[m Merge branch '1.0'
+[33m0dab587[m updates
+[33mb11b311[m Set branch alias to development branch 1.0
+[33m778587d[m Merge branch '1.0'
+[33m928668b[m Init. branch 1.0
+[33m042cbe3[m Initial commit
