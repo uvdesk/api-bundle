@@ -3,12 +3,9 @@ CHANGELOG for 1.1.x
 
 This changelog references any relevant changes introduced in 1.1 minor versions.
 
-* 1.1.5
+* 1.1.4 (2025-09-05)
     Updates:
-    - Added custom field support in ticket create and view request
-
-* 1.1.4
-    Updates:
+    - Added custom field support in ticket create and view request.
     - Agent create event added and returned agent id on response.
     - On ticket reply returning thread details in json response.
     - On ticket create returned ticket data in json response.
@@ -17,7 +14,7 @@ This changelog references any relevant changes introduced in 1.1 minor versions.
     - On group create or update returned the group data in json response.
     - On team create or update returned the team data in json response.
 
-    * Code Refractoring
+    * Code Refactoring.
 
 * 1.1.3 (2024-12-18)
     * Issue #74 - another error on update customer data.
